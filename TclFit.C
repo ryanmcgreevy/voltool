@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <float.h> // FLT_MAX etc
-
 #include "Inform.h"
 #include "utilities.h"
 //#include "SymbolTable.h"
@@ -20,8 +19,11 @@
 #include "TclCommands.h"
 #include "Measure.h"
 #include "MolFilePlugin.h"
+#include "Volutil.h"
 
-
+#include <iostream>
+#include <string>
+#include <sstream>
 
 void moveby(AtomSel *sel, float *vect, MoleculeList *mlist, float *framepos){
   
@@ -34,6 +36,31 @@ void moveby(AtomSel *sel, float *vect, MoleculeList *mlist, float *framepos){
 
 void move(AtomSel *sel, Matrix4 mat, MoleculeList *mlist, float *framepos){
   measure_move(sel, framepos, mat);
+}
+
+
+double density_calc_cc(VolumetricData *volmapA, VolumetricData *synthvol, float resolution) {
+
+  float radscale;
+  double gspacing = 0;
+  double thresholddensity = 0.1;
+  int verbose = 0;
+  float return_cc = 0;
+
+  radscale = .2*resolution;
+  gspacing = 1.5*radscale;
+
+  int quality = 0;
+  if (resolution >= 9)
+    quality = 0;
+  else
+    quality = 3;
+  
+  double cc = 0.0;
+  cc_threaded(synthvol, volmapA, &cc, thresholddensity);
+  return_cc += cc;
+  
+  return return_cc;
 }
 
 double calc_cc (AtomSel *sel, VolumetricData *volmapA, float resolution, MoleculeList *mlist, float *framepos) {
@@ -95,14 +122,27 @@ double calc_cc (AtomSel *sel, VolumetricData *volmapA, float resolution, Molecul
 }
 
 void do_rotate(int stride, float *com, AtomSel *sel, int amt, float *axis, MoleculeList *mlist, float *framepos){
-  float move1[3];
-  vec_scale(move1, -1.0, com);
+//  float move1[3];
+//  vec_scale(move1, -1.0, com);
   double amount = DEGTORAD(stride*amt);
   Matrix4 mat;
   mat.rotate_axis(axis, (float) amount);
-  moveby(sel, move1, mlist, framepos);
+//  moveby(sel, move1, mlist, framepos);
   move(sel, mat, mlist, framepos);
-  moveby(sel, com, mlist, framepos);
+//  moveby(sel, com, mlist, framepos);
+
+}
+
+void do_density_rotate(int stride, int amt, float *axis, VolumetricData *synthvol){
+//  float move1[3];
+//  vec_scale(move1, -1.0, com);
+  double amount = DEGTORAD(stride*amt);
+  Matrix4 mat;
+  mat.rotate_axis(axis, (float) amount);
+//  moveby(sel, move1, mlist, framepos);
+  vol_move(synthvol, mat.mat);
+//  move(sel, mat, mlist, framepos);
+//  moveby(sel, com, mlist, framepos);
 
 }
 
@@ -111,27 +151,35 @@ void rotate(int stride, int max_rot, float *com, float *returncc, float *bestpos
  // float *framepos = sel->coordinates(mlist);
  // float bestpos[sel->selected]; 
   //float best_cc = -1;
+
+  float move1[3];
+  vec_scale(move1, -1.0, com);
+
   for( int x = 0; x < max_rot; x++) {
     for( int y = 0; y < max_rot; y++) {
       for( int z = 0; z < max_rot; z++) {
-        //x
+        
+        //move sel to vmd origin
+        moveby(sel, move1, mlist, framepos);
+        //rotate x
         float axisx [3] = {1, 0, 0};
         do_rotate(stride, com, sel, x, axisx, mlist, framepos);
-        //y
+        //rotate y
         float axisy [3] = {0, 1, 0};
         do_rotate(stride, com, sel, y, axisy, mlist, framepos);
-        //z
+        //rotate z
         float axisz [3] = {0, 0, 1};
         do_rotate(stride, com, sel, z, axisz, mlist, framepos);
+        //move sel back to its original com
+        moveby(sel, com, mlist, framepos);
         
         float cc = calc_cc(sel, volmapA, resolution, mlist, framepos); 
         if (cc > *returncc) {
           *returncc = cc;
-          
           for (int i=0; i<sel->selected*3L; i++) {
            // if (sel->on[i]) {
               bestpos[i] = framepos[i];
-              framepos[i] = origin[i];
+           //   framepos[i] = origin[i];
            // }
           }
         }
@@ -156,6 +204,126 @@ void rotate(int stride, int max_rot, float *com, float *returncc, float *bestpos
   //return bestpos; 
 }
 
+void density_rotate(int stride, int max_rot, float *com, float *returncc, int *bestrot, VolumetricData *volmapA, VolumetricData *synthvol, float resolution, double *origin, double *dx, double *dy, double *dz) {
+  
+ // float *framepos = sel->coordinates(mlist);
+ // float bestpos[sel->selected]; 
+  //float best_cc = -1;
+  int num = 0;
+  float move1[3] = {0, 0, 0};
+  for( int x = 0; x < max_rot; x++) {
+    for( int y = 0; y < max_rot; y++) {
+      for( int z = 0; z < max_rot; z++) {
+        
+        vol_moveto(synthvol, com, move1);
+        //rotate x
+        float axisx [3] = {1, 0, 0};
+        do_density_rotate(stride, x, axisx, synthvol);  
+       //do_rotate(stride, com, sel, x, axisx, mlist, framepos);
+        //rotate y
+        float axisy [3] = {0, 1, 0};
+        //do_rotate(stride, com, sel, y, axisy, mlist, framepos);
+        do_density_rotate(stride, y, axisy, synthvol);  
+        //rotate z
+        float axisz [3] = {0, 0, 1};
+        //do_rotate(stride, com, sel, z, axisz, mlist, framepos);
+        do_density_rotate(stride, z, axisz, synthvol);  
+        
+        float currcom[3];        
+        vol_com(synthvol, currcom);
+        vol_moveto(synthvol, currcom, com);
+       /* 
+        printf("origin %f %f %f\n", 
+        synthvol->origin[0],
+        synthvol->origin[1],
+        synthvol->origin[2]);
+        
+        printf("delta %f %f %f\n", 
+        synthvol->xaxis[0]/(synthvol->xsize - 1), 
+        synthvol->xaxis[1]/(synthvol->xsize - 1),
+        synthvol->xaxis[2]/(synthvol->xsize - 1));
+        printf("delta %f %f %f\n", 
+        synthvol->yaxis[0]/(synthvol->ysize - 1), 
+        synthvol->yaxis[1]/(synthvol->ysize - 1),
+        synthvol->yaxis[2]/(synthvol->ysize - 1));
+        printf("delta %f %f %f\n", 
+        synthvol->zaxis[0]/(synthvol->zsize - 1), 
+        synthvol->zaxis[1]/(synthvol->zsize - 1),
+        synthvol->zaxis[2]/(synthvol->zsize - 1));
+        
+        volmap_write_dx_file(synthvol, "test.dx");
+*/
+       // std::string filename = "output/map-" + std::to_string(num) + ".dx";
+        //printf("filename: %s\n", filename.c_str());
+        //volmap_write_dx_file(synthvol, filename.c_str());
+        num++;
+        float cc = density_calc_cc(volmapA, synthvol, resolution);
+  //      printf ("CC: %f\n", cc); 
+        if (cc > *returncc) {
+          *returncc = cc;
+          bestrot[0] = x;
+          bestrot[1] = y;  
+          bestrot[2] = z;
+          volmap_write_dx_file(synthvol, "best.dx");
+            
+        //  for (int i=0; i<sel->selected*3L; i++) {
+         //     bestpos[i] = framepos[i];
+         //     framepos[i] = origin[i];
+         // }
+        }
+        synthvol->origin[0] = origin[0];
+        synthvol->origin[1] = origin[1];
+        synthvol->origin[2] = origin[2];
+        synthvol->xaxis[0] = dx[0]; 
+        synthvol->xaxis[1] = dx[1]; 
+        synthvol->xaxis[2] = dx[2]; 
+        synthvol->yaxis[0] = dy[0]; 
+        synthvol->yaxis[1] = dy[1]; 
+        synthvol->yaxis[2] = dy[2]; 
+        synthvol->zaxis[0] = dz[0]; 
+        synthvol->zaxis[1] = dz[1]; 
+        synthvol->zaxis[2] = dz[2]; 
+        
+      
+      }
+    } 
+  }
+}
+
+void reset_density(int stride, int *bestrot, VolumetricData *synthvol, float *synthcom, float *framepos, float *com, AtomSel *sel, MoleculeList *mlist) {
+
+  float move1[3];
+  vec_scale(move1, -1.0, synthcom);
+  vol_moveto(synthvol, synthcom, move1);
+
+  //rotate density x 
+  float axisx [3] = {1, 0, 0};
+  do_density_rotate(stride, bestrot[0], axisx, synthvol);  
+  //rotate density y
+  float axisy [3] = {0, 1, 0};
+  do_density_rotate(stride, bestrot[1], axisy, synthvol);  
+  //rotate density z
+  float axisz [3] = {0, 0, 1};
+  do_density_rotate(stride, bestrot[2], axisz, synthvol);  
+  
+  float currcom[3];
+  vol_com(synthvol, currcom);
+  vol_moveto(synthvol, currcom, com);
+  
+  vec_scale(move1, -1.0, com);
+  //move sel to vmd origin
+  moveby(sel, move1, mlist, framepos);
+  //rotate sel x
+  do_rotate(stride, com, sel, bestrot[0], axisx, mlist, framepos);
+  //rotate sel y
+  do_rotate(stride, com, sel, bestrot[1], axisy, mlist, framepos);
+  //rotate sel z
+  do_rotate(stride, com, sel, bestrot[2], axisz, mlist, framepos);
+  //move sel back to its original com
+  moveby(sel, com, mlist, framepos);
+
+
+}
 void reset_origin(float *origin, float *newpos, AtomSel *sel) {
   for (int i=0; i<sel->num_atoms*3L; i++) {
    // if (sel->on[i]) {
@@ -164,108 +332,6 @@ void reset_origin(float *origin, float *newpos, AtomSel *sel) {
   }
 }
 
-void calc_com(VolumetricData *vol, float *com){
-  double origin[3] = {0.0, 0.0, 0.0};
-  double delta[3] = {0.0, 0.0, 0.0};
-  origin[0] = vol->origin[0];
-  origin[1] = vol->origin[1];
-  origin[2] = vol->origin[2];
-  delta[0] = vol->xaxis[0] / (vol->xsize - 1);
-  delta[1] = vol->yaxis[1] / (vol->ysize - 1);
-  delta[2] = vol->zaxis[2] / (vol->zsize - 1);
-  int xsize = vol->xsize;
-  int ysize = vol->ysize;
-
-  int gx,gy,gz;
-  float ix,iy,iz;
-  
-  vec_zero(com);
-  double mass = 0.0;
-
-  for (int i = 0; i < vol->gridsize(); i++) {
-    gz = i / (ysize*xsize);
-    gy = (i % (ysize*xsize)) / xsize;
-    gx = i % xsize;
-    
-    ix = origin[0] + (gx * delta[0]);
-    iy = origin[1] + (gy * delta[1]);
-    iz = origin[2] + (gz * delta[2]);
-    float coord[3] = {ix,iy,iz};
-    float m = vol->data[i];
-    mass = mass+m;
-    vec_scale(coord, m, coord);
-    vec_add(com, com, coord); 
-     
-  }
-  
-  float scale = 1.0/mass;
-  vec_scale(com, scale, com);
-}
-
-void calc_moveto(VolumetricData *vol, float *com, float *pos){
-  float origin[3] = {0.0, 0.0, 0.0};
-  origin[0] = (float)vol->origin[0];
-  origin[1] = (float)vol->origin[1];
-  origin[2] = (float)vol->origin[2];
-
-  float transvector[3];
-  vec_sub(transvector, pos, com);
-  vec_add(origin, origin, transvector);   
-  vol->origin[0] = origin[0];
-  vol->origin[1] = origin[1];
-  vol->origin[2] = origin[2];
-}
-
-void vectrans(float *npoint, float *mat, double *vec){
-  npoint[0]=vec[0]*mat[0]+vec[1]*mat[4]+vec[2]*mat[8];
-  npoint[1]=vec[0]*mat[1]+vec[1]*mat[5]+vec[2]*mat[9];
-  npoint[2]=vec[0]*mat[2]+vec[1]*mat[6]+vec[2]*mat[10];
-}
-
-void calc_move(VolumetricData *vol,  float *mat){
-  float origin[3] = {0.0, 0.0, 0.0};
-  origin[0] = (float)vol->origin[0];
-  origin[1] = (float)vol->origin[1];
-  origin[2] = (float)vol->origin[2];
- 
-  float transvector[3] = {mat[12], mat[13], mat[14]};
-  
-  //const float dx = mat.mat[12];
-  //const float dy = mat.mat[13];
-  //const float dz = mat.mat[14];
- 
-  float npoint[3];
-  
-  //deal with origin transformation
-  //vectrans  
-  npoint[0]=origin[0]*mat[0]+origin[1]*mat[4]+origin[2]*mat[8];
-  npoint[1]=origin[0]*mat[1]+origin[1]*mat[5]+origin[2]*mat[9];
-  npoint[2]=origin[0]*mat[2]+origin[1]*mat[6]+origin[2]*mat[10];
-
-  vec_add(origin, npoint, transvector);
-  vol->origin[0] = origin[0]; 
-  vol->origin[1] = origin[1]; 
-  vol->origin[2] = origin[2]; 
-     
-  //deal with delta transformation
-  double deltax[3] = {vol->xaxis[0],vol->xaxis[1],vol->xaxis[2]};
-  double deltay[3] = {vol->yaxis[0],vol->yaxis[1],vol->yaxis[2]};
-  double deltaz[3] = {vol->zaxis[0],vol->zaxis[1],vol->zaxis[2]};
- 
-  float npointx[3];
-  float npointy[3];
-  float npointz[3];
-  vectrans(npointx, mat, deltax);
-  vectrans(npointy, mat, deltay);
-  vectrans(npointz, mat, deltaz);
-  
-  for (int i = 0; i<3; i++){
-    vol->xaxis[i] = npointx[i];
-    vol->yaxis[i] = npointy[i];
-    vol->zaxis[i] = npointz[i];
-  }
-
-}
 
 int density_com(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
   int verbose = 0;
@@ -356,7 +422,7 @@ int density_com(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inter
   
   
   float com[3] = {0.0,0.0,0.0};
-  calc_com(volmapA, com);  
+  vol_com(volmapA, com);  
  
   Tcl_Obj *tcl_result = Tcl_NewListObj(0, NULL);
   Tcl_ListObjAppendElement(interp, tcl_result, Tcl_NewDoubleObj(com[0]));
@@ -475,7 +541,7 @@ int density_move(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inte
   }
   
  
-  calc_move(volmapA, mat); 
+  vol_move(volmapA, mat); 
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
 
   if (outputmap != NULL) {
@@ -605,8 +671,8 @@ int density_moveto(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *in
  
   float com[3] = {0.0,0.0,0.0};
   float newpos[3] = {(float)pos[0], (float)pos[1], (float)pos[2]};
-  calc_com(volmapA, com);  
-  calc_moveto(volmapA, com, newpos);
+  vol_com(volmapA, com);  
+  vol_moveto(volmapA, com, newpos);
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
 
   if (outputmap != NULL) {
@@ -656,22 +722,12 @@ int fit(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
   double gspacing = 0;
   double resolution = 0;
   const char *input_map = NULL;
-//  Tcl_GetDoubleFromObj(interp, objv[3], &resolution);
-//  printf("Resolution %f\n", resolution);
-//  const char *input_map = NULL;
   MoleculeList *mlist = app->moleculeList;
   Molecule *mymol = mlist->mol_from_id(sel->molid());
-//  FileSpec spec;
-//  spec.waitfor = FileSpec::WAIT_BACK; // shouldn't this be waiting for all?
-//  input_map = Tcl_GetStringFromObj(objv[2], NULL);
-//  molid = app->molecule_new(input_map,0,1);
-  //sel->molid()
-//  int ret_val = app->molecule_load(molid, input_map,app->guess_filetype(input_map),&spec);
-//  if (ret_val < 0) return TCL_ERROR;
   
+  //parse arguments
   for (int i=0; i < argc; i++) {
     char *opt = Tcl_GetStringFromObj(objv[i], NULL);
-//    if (!strcmp(opt, "--weight")) {useweight = true;}
     if (!strcmp(opt, "-i")) {
       if (i == argc-1) {
         Tcl_AppendResult(interp, "No input map specified",NULL);
@@ -682,7 +738,6 @@ int fit(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
       spec.waitfor = FileSpec::WAIT_BACK; // shouldn't this be waiting for all?
       input_map = Tcl_GetStringFromObj(objv[1+i], NULL);
       molid = app->molecule_new(input_map,0,1);
-      //sel->molid()
       int ret_val = app->molecule_load(molid, input_map,app->guess_filetype(input_map),&spec);
       if (ret_val < 0) return TCL_ERROR;
     }
@@ -742,9 +797,47 @@ int fit(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
     Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
     return TCL_ERROR;
   }
+  
+  
+  float *framepos = sel->coordinates(app->moleculeList);
+  //compute center of mass 
+  float com[3];
+  // get atom masses
+  const float *weight = mymol->mass();
+  ret_val = measure_center(sel, framepos, weight, com);
+  if (ret_val < 0) {
+    Tcl_AppendResult(interp, "measure center failed",
+         NULL);
+    return TCL_ERROR;
+  }
+ 
+  //move sel com to 
+  float dencom[3] = {0.0,0.0,0.0};
+  float move1[3];
+  vol_com(volmapA, dencom);
+  vec_sub(move1, dencom, com);
+  moveby(sel, move1, mlist, framepos);
+  //recalc sel com
+  ret_val = measure_center(sel, framepos, weight, com);
+  if (ret_val < 0) {
+    Tcl_AppendResult(interp, "measure center failed",
+         NULL);
+    return TCL_ERROR;
+  }
+  
+  //set up for rotational search
+  float cc = -1;
+  float *bestpos = new float [sel->num_atoms*3L];
+  float *origin= new float [sel->num_atoms*3L];
+  for (int k=0; k<sel->num_atoms*3L; k++) {
+      origin[k] = framepos[k];
+      bestpos[k] = framepos[k];
+  }
+    
+
 /*
+  //fit with map
   // use quicksurf to compute simulated density map
-  const float *framepos = sel->coordinates(app->moleculeList);
   const float *radii = mymol->radius();
   radscale = .2*resolution;
 
@@ -766,7 +859,7 @@ int fit(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
 #if defined(VMDCUDA)
   if (getenv("VMDNOCUDA") == NULL) {
     cuda_err = vmd_cuda_calc_density(sel, app->moleculeList, quality, radscale, gspacing, &synthvol, NULL, NULL, verbose);
-    delete synthvol;
+  //  delete synthvol;
   }
 #endif
 
@@ -778,30 +871,43 @@ int fit(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
     synthvol = qs->calc_density_map(sel, mymol, framepos, radii,
                                   quality, (float)radscale, (float)gspacing);
 //    volmap_write_dx_file(volmap, outputmap);
-    delete synthvol;
+   // delete synthvol;
     delete qs;
   }
+  
+  float synthcom[3];
+  vol_com(synthvol, synthcom);
+
+
+  int bestrot[3];
+  double *synthorigin = synthvol->origin;
+  double *dx = synthvol->xaxis;
+  double *dy = synthvol->yaxis;
+  double *dz = synthvol->zaxis;
+
+  int stride = 5;
+  int max_rot = 360/stride;
+  density_rotate(stride, max_rot, synthcom, &cc, bestrot, volmapA, synthvol, resolution, synthorigin, dx, dy, dz);
+  
+  reset_density(stride, bestrot, synthvol, synthcom, framepos, com, sel, mlist);
+  
+  int stride2 = 6;
+  max_rot = stride/stride2;
+  density_rotate(stride2, max_rot, synthcom, &cc, bestrot, volmapA, synthvol, resolution, synthorigin, dx, dy, dz);
+  density_rotate(-stride2, max_rot, synthcom, &cc, bestrot, volmapA, synthvol, resolution, synthorigin, dx, dy, dz);
+
+  int stride3 = 1;
+  max_rot = stride2/stride3;
+  density_rotate(stride3, max_rot, synthcom, &cc, bestrot, volmapA, synthvol, resolution, synthorigin, dx, dy, dz);
+  reset_density(stride3, bestrot, synthvol, synthcom, framepos, com, sel, mlist);
+  density_rotate(-stride3, max_rot, synthcom, &cc, bestrot, volmapA, synthvol, resolution, synthorigin, dx, dy, dz);
+
+  reset_density(stride3, bestrot, synthvol, synthcom, framepos, com, sel, mlist);
+
 */
-  float *framepos = sel->coordinates(app->moleculeList);
-  //compute center of mass 
-  float com[3];
-  // get atom masses
-  const float *weight = mymol->mass();
-  ret_val = measure_center(sel, framepos, weight, com);
-  if (ret_val < 0) {
-    Tcl_AppendResult(interp, "measure center failed",
-         NULL);
-    return TCL_ERROR;
-  }
- 
-  float cc = -1;
-  float *bestpos = new float [sel->num_atoms*3L];
-  float *origin= new float [sel->num_atoms*3L];
-  for (int k=0; k<sel->num_atoms*3L; k++) {
-   // if (sel->on[i]) {
-      origin[k] = framepos[k];
-   // }
-  }
+
+
+  //fit with struct
   int stride = 24;
   int max_rot = 360/stride;
   rotate(stride, max_rot, com, &cc, bestpos, sel, mlist, volmapA, resolution, origin, framepos);
@@ -817,17 +923,14 @@ int fit(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
   max_rot = stride2/stride3;
   rotate(stride3, max_rot, com, &cc, bestpos, sel, mlist, volmapA, resolution, origin, framepos);
   rotate(-stride3, max_rot, com, &cc, bestpos, sel, mlist, volmapA, resolution, origin, framepos);
-  //reset_origin(origin, bestpos, sel); 
   
-  //framepos = origin;
   for (int j=0; j<sel->num_atoms*3L; j++) {
-   // if (sel->on[j]) {
       framepos[j] = bestpos[j];
-   // }
   }
-  //mymol->force_recalc(DrawMolItem::SEL_REGEN | DrawMolItem::COL_REGEN); 
+  
   // notify molecule that coordinates changed.
   mymol->force_recalc(DrawMolItem::MOL_REGEN);
+ 
  
  // int frame = app->molecule_frame(sel->molid());
  // FileSpec speco;
