@@ -223,7 +223,7 @@ VMD_CCPP    =	OpenGLDisplayDevice.C \
 		TclCommands.C \
 		TclFastPBC.C \
 		TclMDFF.C \
-		TclFit.C \
+		TclVoltool.C \
 		TclMeasure.C \
 		TclMolInfo.C \
 		TclTextInterp.C \
