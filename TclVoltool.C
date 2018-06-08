@@ -122,14 +122,10 @@ double calc_cc (AtomSel *sel, VolumetricData *volmapA, float resolution, Molecul
 }
 
 void do_rotate(int stride, float *com, AtomSel *sel, int amt, float *axis, MoleculeList *mlist, float *framepos){
-//  float move1[3];
-//  vec_scale(move1, -1.0, com);
   double amount = DEGTORAD(stride*amt);
   Matrix4 mat;
   mat.rotate_axis(axis, (float) amount);
-//  moveby(sel, move1, mlist, framepos);
   move(sel, mat, mlist, framepos);
-//  moveby(sel, com, mlist, framepos);
 
 }
 
@@ -179,7 +175,6 @@ void rotate(int stride, int max_rot, float *com, float *returncc, float *bestpos
           for (int i=0; i<sel->selected*3L; i++) {
            // if (sel->on[i]) {
               bestpos[i] = framepos[i];
-           //   framepos[i] = origin[i];
            // }
           }
         }
@@ -188,27 +183,14 @@ void rotate(int stride, int max_rot, float *com, float *returncc, float *bestpos
             framepos[i] = origin[i];
          // }
         }
-       // framepos = origin;  
-        
-        //x
-       // do_rotate(stride, com, sel, -x, axisx, mlist, framepos);
-        //y
-       // do_rotate(stride, com, sel, -y, axisy, mlist, framepos);
-        //z
-       // do_rotate(stride, com, sel, -z, axisz, mlist, framepos);
 
       }
     } 
   }
-  //*returncc = best_cc;
-  //return bestpos; 
 }
 
 void density_rotate(int stride, int max_rot, float *com, float *returncc, int *bestrot, VolumetricData *volmapA, VolumetricData *synthvol, float resolution, double *origin, double *dx, double *dy, double *dz) {
   
- // float *framepos = sel->coordinates(mlist);
- // float bestpos[sel->selected]; 
-  //float best_cc = -1;
   int num = 0;
   float move1[3] = {0, 0, 0};
   for( int x = 0; x < max_rot; x++) {
@@ -264,12 +246,8 @@ void density_rotate(int stride, int max_rot, float *com, float *returncc, int *b
           bestrot[0] = x;
           bestrot[1] = y;  
           bestrot[2] = z;
-          volmap_write_dx_file(synthvol, "best.dx");
+        //  volmap_write_dx_file(synthvol, "best.dx");
             
-        //  for (int i=0; i<sel->selected*3L; i++) {
-         //     bestpos[i] = framepos[i];
-         //     framepos[i] = origin[i];
-         // }
         }
         synthvol->origin[0] = origin[0];
         synthvol->origin[1] = origin[1];
@@ -326,9 +304,7 @@ void reset_density(int stride, int *bestrot, VolumetricData *synthvol, float *sy
 }
 void reset_origin(float *origin, float *newpos, AtomSel *sel) {
   for (int i=0; i<sel->num_atoms*3L; i++) {
-   // if (sel->on[i]) {
       origin[i] = newpos[i];
-   // }
   }
 }
 
@@ -336,15 +312,11 @@ void reset_origin(float *origin, float *newpos, AtomSel *sel) {
 int density_com(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
   int verbose = 0;
   if (argc < 3) {
-     // "     options: --allframes (average over all frames)\n"
-    Tcl_SetResult(interp, (char *) "usage: rigid "
+    Tcl_SetResult(interp, (char *) "usage: voltool "
       "com: [options]\n"
       "    options:  -i <input map> specifies new density filename to load.\n"
       "              -mol <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n",
-//      "              --weight (weight density with atomic numbers)\n"
-    //  "              -res <target resolution in Angstroms> (default 10.0)\n"
-    //  "              -map <target resolution in Angstroms> (default 10.0)\n"
       TCL_STATIC);
     return TCL_ERROR;
   }
@@ -358,7 +330,6 @@ int density_com(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inter
   
   for (int i=0; i < argc; i++) {
     char *opt = Tcl_GetStringFromObj(objv[i], NULL);
-//    if (!strcmp(opt, "--weight")) {useweight = true;}
     if (!strcmp(opt, "-i")) {
       if (i == argc-1) {
         Tcl_AppendResult(interp, "No input map specified",NULL);
@@ -369,7 +340,6 @@ int density_com(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inter
       spec.waitfor = FileSpec::WAIT_BACK; // shouldn't this be waiting for all?
       input_map = Tcl_GetStringFromObj(objv[1+i], NULL);
       molid = app->molecule_new(input_map,0,1);
-      //sel->molid()
       int ret_val = app->molecule_load(molid, input_map,app->guess_filetype(input_map),&spec);
       if (ret_val < 0) return TCL_ERROR;
     }
@@ -436,16 +406,12 @@ int density_com(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inter
 int density_move(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
   int verbose = 0;
   if (argc < 3) {
-     // "     options: --allframes (average over all frames)\n"
-    Tcl_SetResult(interp, (char *) "usage: rigid "
+    Tcl_SetResult(interp, (char *) "usage: voltool "
       "move: -mat <4x4 transform matrix to apply to density> [options]\n"
       "    options:  -i <input map> specifies new density filename to load.\n"
       "              -mol <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
       "              -o <filename> write moved density to file.\n",
-//      "              --weight (weight density with atomic numbers)\n"
-    //  "              -res <target resolution in Angstroms> (default 10.0)\n"
-    //  "              -map <target resolution in Angstroms> (default 10.0)\n"
       TCL_STATIC);
     return TCL_ERROR;
   }
@@ -461,7 +427,6 @@ int density_move(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inte
   
   for (int i=0; i < argc; i++) {
     char *opt = Tcl_GetStringFromObj(objv[i], NULL);
-//    if (!strcmp(opt, "--weight")) {useweight = true;}
     if (!strcmp(opt, "-i")) {
       if (i == argc-1) {
         Tcl_AppendResult(interp, "No input map specified",NULL);
@@ -472,7 +437,6 @@ int density_move(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inte
       spec.waitfor = FileSpec::WAIT_BACK; // shouldn't this be waiting for all?
       input_map = Tcl_GetStringFromObj(objv[1+i], NULL);
       molid = app->molecule_new(input_map,0,1);
-      //sel->molid()
       int ret_val = app->molecule_load(molid, input_map,app->guess_filetype(input_map),&spec);
       if (ret_val < 0) return TCL_ERROR;
     }
@@ -554,16 +518,12 @@ int density_move(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inte
 int density_moveto(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
   int verbose = 0;
   if (argc < 3) {
-     // "     options: --allframes (average over all frames)\n"
-    Tcl_SetResult(interp, (char *) "usage: rigid "
+    Tcl_SetResult(interp, (char *) "usage: voltool "
       "moveto: -pos <x,y,z coordinates to move com to> [options]\n"
       "    options:  -i <input map> specifies new density filename to load.\n"
       "              -mol <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
       "              -o <filename> write moved density to file.\n",
-//      "              --weight (weight density with atomic numbers)\n"
-    //  "              -res <target resolution in Angstroms> (default 10.0)\n"
-    //  "              -map <target resolution in Angstroms> (default 10.0)\n"
       TCL_STATIC);
     return TCL_ERROR;
   }
@@ -579,7 +539,6 @@ int density_moveto(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *in
   
   for (int i=0; i < argc; i++) {
     char *opt = Tcl_GetStringFromObj(objv[i], NULL);
-//    if (!strcmp(opt, "--weight")) {useweight = true;}
     if (!strcmp(opt, "-i")) {
       if (i == argc-1) {
         Tcl_AppendResult(interp, "No input map specified",NULL);
@@ -590,7 +549,6 @@ int density_moveto(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *in
       spec.waitfor = FileSpec::WAIT_BACK; // shouldn't this be waiting for all?
       input_map = Tcl_GetStringFromObj(objv[1+i], NULL);
       molid = app->molecule_new(input_map,0,1);
-      //sel->molid()
       int ret_val = app->molecule_load(molid, input_map,app->guess_filetype(input_map),&spec);
       if (ret_val < 0) return TCL_ERROR;
     }
@@ -685,16 +643,12 @@ int density_moveto(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *in
 int fit(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
   int verbose = 0;
   if (argc < 3) {
-     // "     options: --allframes (average over all frames)\n"
-    Tcl_SetResult(interp, (char *) "usage: rigid "
+    Tcl_SetResult(interp, (char *) "usage: voltool "
       "fit: <selection> -res <resolution of map in A> [options]\n"
       "    options:  -i <input map> specifies new target density filename to load.\n"
       "              -mol <molid> specifies an already loaded density's molid for use as target\n"
       "              -thresholddensity <x> (ignores voxels with values below x threshold)\n"
       "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n",
-//      "              --weight (weight density with atomic numbers)\n"
-    //  "              -res <target resolution in Angstroms> (default 10.0)\n"
-    //  "              -map <target resolution in Angstroms> (default 10.0)\n"
       TCL_STATIC);
     return TCL_ERROR;
   }
@@ -944,11 +898,11 @@ int fit(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
   return TCL_OK;
 }
 
-int obj_fit(ClientData cd, Tcl_Interp *interp, int argc,
+int obj_voltool(ClientData cd, Tcl_Interp *interp, int argc,
                             Tcl_Obj * const objv[]){
   if (argc < 2) {
     Tcl_SetResult(interp,
-    (char *) "Usage: rigid <command> [args...]\n"
+    (char *) "Usage: voltool <command> [args...]\n"
       "Commands:\n"
       "fit      -- rigid body fitting\n"
       "com      -- get center of mass of density\n"
@@ -970,6 +924,6 @@ int obj_fit(ClientData cd, Tcl_Interp *interp, int argc,
   if (!strupncmp(argv1, "move", CMDLEN))
     return density_move(app, argc-1, objv+1, interp);
 
-  Tcl_SetResult(interp, (char *) "Type 'rigid' for summary of usage\n", TCL_VOLATILE);
+  Tcl_SetResult(interp, (char *) "Type 'voltool' for summary of usage\n", TCL_VOLATILE);
   return TCL_OK;
 }
