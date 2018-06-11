@@ -177,6 +177,10 @@ void rotate(int stride, int max_rot, float *com, float *returncc, float *bestpos
               bestpos[i] = framepos[i];
            // }
           }
+        } else if (cc < *returncc) {
+//          x++;
+//          y++;
+          z++;
         }
         for (int i=0; i<sel->selected*3L; i++) {
          // if (sel->on[i]) {
@@ -867,7 +871,7 @@ int fit(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
   rotate(stride, max_rot, com, &cc, bestpos, sel, mlist, volmapA, resolution, origin, framepos);
   reset_origin(origin, bestpos, sel); 
 
-  int stride2 = 6;
+  int stride2 = 4;
   max_rot = stride/stride2;
   rotate(stride2, max_rot, com, &cc, bestpos, sel, mlist, volmapA, resolution, origin, framepos);
   rotate(-stride2, max_rot, com, &cc, bestpos, sel, mlist, volmapA, resolution, origin, framepos);
