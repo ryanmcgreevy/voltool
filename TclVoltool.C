@@ -885,7 +885,6 @@ int fit(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
   // notify molecule that coordinates changed.
   mymol->force_recalc(DrawMolItem::MOL_REGEN);
  
- 
  // int frame = app->molecule_frame(sel->molid());
  // FileSpec speco;
  // speco.first = frame;                // write current frame only

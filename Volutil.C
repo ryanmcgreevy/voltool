@@ -91,10 +91,6 @@ void vol_move(VolumetricData *vol,  float *mat){
   origin[2] = (float)vol->origin[2];
  
   float transvector[3] = {mat[12], mat[13], mat[14]};
-//  printf("TRANSVEC: %f %f %f\n", mat[12],mat[13],mat[14]); 
-  //const float dx = mat.mat[12];
-  //const float dy = mat.mat[13];
-  //const float dz = mat.mat[14];
  
   float npoint[3];
   
