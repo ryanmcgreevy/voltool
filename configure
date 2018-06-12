@@ -1666,7 +1666,7 @@ $vmd_libs          = "$tcl_libs";
 		   'VolMapCreateILS.C',
                    'VolumetricData.C',
                    'VolumeTexture.C',
-		   'Volutil.C',
+		   'Voltool.C',
 		   'VrmlDisplayDevice.C', 
 		   'Vrml2DisplayDevice.C', 
 		   'Watershed.C', 

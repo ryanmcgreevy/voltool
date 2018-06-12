@@ -1,3 +1,8 @@
+#include "VolumetricData.h"
+#define MIN(X,Y) (((X)<(Y))? (X) : (Y))
+#define MAX(X,Y) (((X)>(Y))? (X) : (Y))
+
+void pad(VolumetricData *vol, int padxm, int padxp, int padym, int padyp, int padzm, int padzp);
 void vol_com(VolumetricData *vol, float *com);
 void vol_moveto(VolumetricData *vol, float *com, float *pos);
 inline void vectrans(float *npoint, float *mat, double *vec){

@@ -23,7 +23,59 @@
 #include <iostream>
 #include <string>
 #include <sstream>
-#include "Volutil.h"
+#include "Voltool.h"
+
+// Pad each side of the volmap's grid with zeros. Negative padding results
+// in a trimming of the map
+void pad(VolumetricData *vol, int padxm, int padxp, int padym, int padyp, int padzm, int padzp) {
+  
+  int xsize = vol->xsize; 
+  int ysize = vol->ysize; 
+  int zsize = vol->zsize; 
+  double xdelta[3] = {(vol->xaxis[0] / (vol->xsize - 1)) , (vol->xaxis[1] / (vol->xsize - 1)) , (vol->xaxis[2] / (vol->xsize - 1))};
+  double ydelta[3] = {(vol->yaxis[0] / (vol->ysize - 1)) , (vol->yaxis[1] / (vol->ysize - 1)) , (vol->yaxis[2] / (vol->ysize - 1))};
+  double zdelta[3] = {(vol->zaxis[0] / (vol->zsize - 1)) , (vol->zaxis[1] / (vol->zsize - 1)) , (vol->zaxis[2] / (vol->zsize - 1))};
+ 
+
+  int xsize_new = MAX(1, xsize + padxm + padxp);
+  int ysize_new = MAX(1, ysize + padym + padyp);
+  int zsize_new = MAX(1, zsize + padzm + padzp);
+  
+  int gridsize = xsize_new*ysize_new*zsize_new;
+  float *data_new = new float[gridsize];
+  memset(data_new, 0, gridsize*sizeof(float));
+
+  int startx = MAX(0, padxm);
+  int starty = MAX(0, padym);
+  int startz = MAX(0, padzm);
+  int endx = MIN(xsize_new, xsize+padxm);
+  int endy = MIN(ysize_new, ysize+padym);
+  int endz = MIN(zsize_new, zsize+padzm);
+
+  int gx, gy, gz;
+  for (gx=startx; gx<endx; gx++)
+  for (gy=starty; gy<endy; gy++)
+  for (gz=startz; gz<endz; gz++)
+    data_new[gx + gy*xsize_new + gz*xsize_new*ysize_new] = vol->data[(gx-padxm) + (gy-padym)*xsize + (gz-padzm)*xsize*ysize];
+
+  delete vol->data;
+  vol->data = data_new;
+
+  vol->xsize = xsize_new;
+  vol->ysize = ysize_new;
+  vol->zsize = zsize_new;
+  
+
+  vec_scaled_add(vol->xaxis, padxm+padxp, xdelta);
+  vec_scaled_add(vol->yaxis, padym+padyp, ydelta);
+  vec_scaled_add(vol->zaxis, padzm+padzp, zdelta);
+  
+  vec_scaled_add(vol->origin, -padxm, xdelta);
+  vec_scaled_add(vol->origin, -padym, ydelta);
+  vec_scaled_add(vol->origin, -padzm, zdelta);
+
+
+}
 
 void vol_com(VolumetricData *vol, float *com){
   double origin[3] = {0.0, 0.0, 0.0};
