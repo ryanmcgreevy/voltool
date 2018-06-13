@@ -139,6 +139,57 @@ void crop(VolumetricData *vol, double crop_minx, double crop_miny, double crop_m
 
 }
 
+void clamp(VolumetricData *vol, float min_value, float max_value) {
+  int xsize = vol->xsize; 
+  int ysize = vol->ysize; 
+  int zsize = vol->zsize; 
+  
+  for (int i=0; i<xsize*ysize*zsize; i++) {
+    if (vol->data[i] < min_value) vol->data[i] = min_value;
+    else if (vol->data[i] > max_value) vol->data[i] = max_value;
+  }
+}
+
+
+
+void scale_by(VolumetricData *vol, float ff) {
+  int xsize = vol->xsize; 
+  int ysize = vol->ysize; 
+  int zsize = vol->zsize; 
+
+  for (int i=0; i<xsize*ysize*zsize; i++)
+    vol->data[i] *= ff;
+
+}
+
+void scalar_add(VolumetricData *vol, float ff) {
+  int xsize = vol->xsize; 
+  int ysize = vol->ysize; 
+  int zsize = vol->zsize; 
+
+  for (int i=0; i<xsize*ysize*zsize; i++)
+    vol->data[i] += ff;
+
+}
+
+void fit_to_range(VolumetricData *vol, float min_value, float max_value) {
+  int xsize = vol->xsize; 
+  int ysize = vol->ysize; 
+  int zsize = vol->zsize; 
+
+  float min = vol->data[0];
+  float max = vol->data[0];
+  int i;
+  for (i=1; i<xsize*ysize*zsize; i++) {
+    if (vol->data[i] < min) min = vol->data[i];
+    if (vol->data[i] > max) max = vol->data[i];
+  }
+  
+  for (i=0; i<xsize*ysize*zsize; i++)
+    vol->data[i] = min_value + (max_value - min_value)*(vol->data[i] - min)/(max - min);
+
+}
+
 void vol_moveto(VolumetricData *vol, float *com, float *pos){
   float origin[3] = {0.0, 0.0, 0.0};
   origin[0] = (float)vol->origin[0];
