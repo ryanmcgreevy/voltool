@@ -865,7 +865,7 @@ int fit(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
 int density_trim(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
   if (argc < 3) {
     Tcl_SetResult(interp, (char *) "usage: voltool "
-      "trim: -amt <x,y,z> amount to trim in x, y, z axes> [options]\n"
+      "trim: -amt <x1, x2, y1, y2, z1, z2> amount to trim from each end in x, y, z axes> [options]\n"
       "    options:  -i <input map> specifies new density filename to load.\n"
       "              -mol <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
@@ -877,7 +877,7 @@ int density_trim(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inte
 
   int molid = -1;
   int volid = 0;
-  int trim[3] = {0, 0, 0};
+  int trim[6] = {0, 0, 0, 0, 0, 0};
   const char *input_map = NULL;
   const char *outputmap = NULL;
   MoleculeList *mlist = app->moleculeList;
@@ -931,9 +931,13 @@ int density_trim(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inte
     
       for (int i=0; i<num1; i++) {
         if (Tcl_GetIntFromObj(interp, vector[i], &trim[i]) != TCL_OK) {
-          Tcl_SetResult(interp, (char *) "vecscale: non-numeric in vector", TCL_STATIC);
+          Tcl_SetResult(interp, (char *) "amt: non-numeric in vector", TCL_STATIC);
           return TCL_ERROR;
         }
+      }
+      if (num1 != 6) {
+        Tcl_SetResult(interp, (char *) "amt: incorrect number of values in vector", TCL_STATIC);
+        return TCL_ERROR;
       }
     
     }
@@ -966,7 +970,7 @@ int density_trim(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inte
     Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
     return TCL_ERROR;
   }
-  pad(volmapA, -trim[0], -trim[0], -trim[1], -trim[1], -trim[2], -trim[2]); 
+  pad(volmapA, -trim[0], -trim[1], -trim[2], -trim[3], -trim[4], -trim[5]); 
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
   if (outputmap != NULL) {
