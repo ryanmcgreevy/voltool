@@ -116,6 +116,29 @@ void vol_com(VolumetricData *vol, float *com){
   vec_scale(com, scale, com);
 }
 
+// Crop the map based on minmax values given in coordinate space. If
+// the 'cropping box' exceeds the map boundaries, the map is padded
+// with zeroes. 
+void crop(VolumetricData *vol, double crop_minx, double crop_miny, double crop_minz, double crop_maxx, double crop_maxy, double crop_maxz) {
+
+  double xdelta[3] = {(vol->xaxis[0] / (vol->xsize - 1)) , (vol->xaxis[1] / (vol->xsize - 1)) , (vol->xaxis[2] / (vol->xsize - 1))};
+  double ydelta[3] = {(vol->yaxis[0] / (vol->ysize - 1)) , (vol->yaxis[1] / (vol->ysize - 1)) , (vol->yaxis[2] / (vol->ysize - 1))};
+  double zdelta[3] = {(vol->zaxis[0] / (vol->zsize - 1)) , (vol->zaxis[1] / (vol->zsize - 1)) , (vol->zaxis[2] / (vol->zsize - 1))};
+
+  // Right now, only works for orthogonal cells. look at cc_threaded in MDFF.C for example of calculating
+  //correct delta for non-ortho
+  int padxm = int((vol->origin[0] - crop_minx)/xdelta[0]);
+  int padym = int((vol->origin[1] - crop_miny)/ydelta[1]);
+  int padzm = int((vol->origin[2] - crop_minz)/zdelta[2]);
+
+  int padxp = int((crop_maxx - vol->origin[0] - vol->xaxis[0])/xdelta[0]);
+  int padyp = int((crop_maxy - vol->origin[1] - vol->yaxis[1])/ydelta[1]);
+  int padzp = int((crop_maxz - vol->origin[2] - vol->zaxis[2])/zdelta[2]);
+
+  pad(vol, padxm, padxp, padym, padyp, padzm, padzp);
+
+}
+
 void vol_moveto(VolumetricData *vol, float *com, float *pos){
   float origin[3] = {0.0, 0.0, 0.0};
   origin[0] = (float)vol->origin[0];
