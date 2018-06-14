@@ -28,6 +28,7 @@ void scalar_add(VolumetricData *vol, float ff);
 void fit_to_range(VolumetricData *vol, float min_value, float max_value);
 void downsample(VolumetricData *vol);
 void supersample(VolumetricData *vol);
+void sigma_scale(VolumetricData *vol);
 void vol_com(VolumetricData *vol, float *com);
 void vol_moveto(VolumetricData *vol, float *com, float *pos);
 void vol_move(VolumetricData *vol,  float *mat);

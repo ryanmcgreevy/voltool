@@ -365,6 +365,33 @@ void supersample(VolumetricData *vol) {
   vol->data = data_new;
 }
 
+// Transform map to a sigma scale, so that isovalues in VMD correspond
+// to number of sigmas above the mean
+void sigma_scale(VolumetricData *vol) {
+  int xsize = vol->xsize; 
+  int ysize = vol->ysize; 
+  int zsize = vol->zsize; 
+  
+  int size = xsize*ysize*zsize;
+  double mean = 0.;
+  int i;
+  for (i=0; i<size; i++)
+    mean += vol->data[i];
+  mean /= size;
+
+  double sigma = 0.;
+  for (i=0; i<size; i++)
+    sigma += (vol->data[i] - mean)*(vol->data[i] - mean);
+  sigma /= size;
+  sigma = sqrt(sigma);
+
+  for (i=0; i<size; i++) {
+    vol->data[i] -= mean;
+    vol->data[i] /= sigma;
+  }
+
+}
+
 void vol_moveto(VolumetricData *vol, float *com, float *pos){
   float origin[3] = {0.0, 0.0, 0.0};
   origin[0] = (float)vol->origin[0];
