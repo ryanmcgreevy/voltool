@@ -392,6 +392,19 @@ void sigma_scale(VolumetricData *vol) {
 
 }
 
+// Makes a mask out of a map
+// i.e. all values > 0 are set to 1
+void binmask(VolumetricData *vol) {
+  int xsize = vol->xsize; 
+  int ysize = vol->ysize; 
+  int zsize = vol->zsize; 
+  clamp(vol, 0., FLT_MAX);
+  int i;
+  for (i=0; i<xsize*ysize*zsize; i++) {
+    if (vol->data[i] > 0) vol->data[i] = 1;
+  }
+}
+
 void vol_moveto(VolumetricData *vol, float *com, float *pos){
   float origin[3] = {0.0, 0.0, 0.0};
   origin[0] = (float)vol->origin[0];
