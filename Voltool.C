@@ -190,6 +190,58 @@ void fit_to_range(VolumetricData *vol, float min_value, float max_value) {
 
 }
 
+// Downsample grid size by factor of 2
+//Changed from volutil so it doesn't support PMF; unclear
+//whether that is still important.
+void downsample(VolumetricData *vol) {
+  int xsize = vol->xsize; 
+  int ysize = vol->ysize; 
+  int zsize = vol->zsize; 
+  int gx, gy, gz, j;
+  
+  int xsize_new = xsize/2;
+  int ysize_new = ysize/2;
+  int zsize_new = zsize/2;
+  float *data_new = new float[xsize_new*ysize_new*zsize_new];
+  
+  int index_shift[8] = {0, 1, xsize, xsize+1, xsize*ysize, xsize*ysize + 1, xsize*ysize + xsize, xsize*ysize + xsize + 1};
+  
+  for (gx=0; gx<xsize_new; gx++)
+  for (gy=0; gy<ysize_new; gy++)
+  for (gz=0; gz<zsize_new; gz++) {
+    int n_new = gx + gy*xsize_new + gz*xsize_new*ysize_new;
+    int n = 2*(gx + gy*xsize + gz*xsize*ysize);
+    double Z=0.;
+    for (j=0; j<8; j++) Z += vol->data[n+index_shift[j]];
+    data_new[n_new] = Z/8.;
+  }
+  
+  xsize = xsize_new;
+  ysize = ysize_new;
+  zsize = zsize_new;
+  //not stored in VolumetricData of VMD, only Volmap in volutil...
+  //maybe we should add it because it is used so often.
+  //vscale(xdelta, 2.);
+  //vscale(ydelta, 2.);
+  //vscale(zdelta, 2.);
+  const float old_xaxis[3] = {(float)vol->xaxis[0], (float)vol->xaxis[1], (float)vol->xaxis[2]};
+  const float old_yaxis[3] = {(float)vol->yaxis[0], (float)vol->yaxis[1], (float)vol->yaxis[2]};
+  const float old_zaxis[3] = {(float)vol->zaxis[0], (float)vol->zaxis[1], (float)vol->zaxis[2]};
+  
+  float scaling_factor = 0.5*(xsize)/(xsize/2);
+  vec_scale((float *)vol->xaxis, scaling_factor, old_xaxis);
+  scaling_factor = 0.5*(ysize)/(ysize/2);
+  vec_scale((float *)vol->yaxis, scaling_factor, old_yaxis);
+  scaling_factor = 0.5*(zsize)/(zsize/2);
+  vec_scale((float *)vol->zaxis, scaling_factor, old_zaxis);
+  
+//  vaddscaledto(origin, 0.25, xdelta);
+//  vaddscaledto(origin, 0.25, ydelta);
+//  vaddscaledto(origin, 0.25, zdelta);
+      
+  delete[] vol->data;
+  vol->data = data_new;
+}
 void vol_moveto(VolumetricData *vol, float *com, float *pos){
   float origin[3] = {0.0, 0.0, 0.0};
   origin[0] = (float)vol->origin[0];
