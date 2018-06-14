@@ -1640,6 +1640,101 @@ int density_downsample(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp
 
 }
 
+int density_supersample(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
+  if (argc < 3) {
+    Tcl_SetResult(interp, (char *) "usage: voltool "
+      "downsample [options]\n"
+      "    options:  -i <input map> specifies new density filename to load.\n"
+      "              -mol <molid> specifies an already loaded density's molid for use as target\n"
+      "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
+      "              -o <filename> write moved density to file.\n",
+      TCL_STATIC);
+    return TCL_ERROR;
+  }
+
+
+  int molid = -1;
+  int volid = 0;
+  const char *input_map = NULL;
+  const char *outputmap = NULL;
+  MoleculeList *mlist = app->moleculeList;
+  
+  for (int i=0; i < argc; i++) {
+    char *opt = Tcl_GetStringFromObj(objv[i], NULL);
+    if (!strcmp(opt, "-i")) {
+      if (i == argc-1) {
+        Tcl_AppendResult(interp, "No input map specified",NULL);
+        return TCL_ERROR;
+      }
+
+      FileSpec spec;
+      spec.waitfor = FileSpec::WAIT_BACK; // shouldn't this be waiting for all?
+      input_map = Tcl_GetStringFromObj(objv[1+i], NULL);
+      molid = app->molecule_new(input_map,0,1);
+      int ret_val = app->molecule_load(molid, input_map,app->guess_filetype(input_map),&spec);
+      if (ret_val < 0) return TCL_ERROR;
+    }
+
+
+    if (!strcmp(opt, "-mol")) {
+      if (i == argc-1) {
+        Tcl_AppendResult(interp, "No molid specified",NULL);
+        return TCL_ERROR;
+      } else if ( Tcl_GetIntFromObj(interp, objv[i+1], &molid) != TCL_OK) {
+        Tcl_AppendResult(interp, "\n molid incorrectly specified",NULL);
+        return TCL_ERROR;
+      }
+    }
+
+    if (!strcmp(opt, "-vol")) {
+      if (i == argc-1){
+        Tcl_AppendResult(interp, "No volume id specified",NULL);
+        return TCL_ERROR;
+      } else if ( Tcl_GetIntFromObj(interp, objv[i+1], &volid) != TCL_OK) {
+        Tcl_AppendResult(interp, "\n volume id incorrectly specified",NULL);
+        return TCL_ERROR;
+      }
+    }
+    
+    if (!strcmp(opt, "-o")) {
+      if (i == argc-1) {
+        Tcl_AppendResult(interp, "No output file specified",NULL);
+        return TCL_ERROR;
+      } else {
+        outputmap = Tcl_GetStringFromObj(objv[i+1], NULL);
+      }
+    }
+  }
+  Molecule *volmol = NULL;
+  VolumetricData *volmapA = NULL;
+  if (molid > -1) {
+    volmol = mlist->mol_from_id(molid);
+    if (volmol == NULL) {
+      Tcl_AppendResult(interp, "\n invalid molecule specified",NULL);
+      return TCL_ERROR;
+    }
+
+    if (volmapA == NULL) 
+      volmapA = volmol->modify_volume_data(volid);
+  } else {
+    Tcl_AppendResult(interp, "\n no target volume specified",NULL);
+    return TCL_ERROR;
+  }
+  if (volmapA == NULL) {
+    Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
+    return TCL_ERROR;
+  }
+
+  supersample(volmapA); 
+  volmol->force_recalc(DrawMolItem::MOL_REGEN);
+  
+  if (outputmap != NULL) {
+    volmap_write_dx_file(volmapA, outputmap);
+  }
+  return TCL_OK;
+
+}
+
 int obj_voltool(ClientData cd, Tcl_Interp *interp, int argc,
                             Tcl_Obj * const objv[]){
   if (argc < 2) {
@@ -1659,6 +1754,7 @@ int obj_voltool(ClientData cd, Tcl_Interp *interp, int argc,
       "sadd         -- add a scaling factor to every voxel\n"
       "range        -- fit voxel values to a given range\n"
       "downsample   -- downsample by x2 (x8 total reduction)\n"
+      "supersample  -- supersample by x2 (x8 total increase)\n"
       ,
       TCL_STATIC);
     return TCL_ERROR;
@@ -1692,6 +1788,8 @@ int obj_voltool(ClientData cd, Tcl_Interp *interp, int argc,
     return density_range(app, argc-1, objv+1, interp);
   if (!strupncmp(argv1, "downsample", CMDLEN))
     return density_downsample(app, argc-1, objv+1, interp);
+  if (!strupncmp(argv1, "supersample", CMDLEN))
+    return density_supersample(app, argc-1, objv+1, interp);
 
   Tcl_SetResult(interp, (char *) "Type 'voltool' for summary of usage\n", TCL_VOLATILE);
   return TCL_OK;

@@ -242,6 +242,129 @@ void downsample(VolumetricData *vol) {
   delete[] vol->data;
   vol->data = data_new;
 }
+
+// Supersample grid size by factor of 2
+void supersample(VolumetricData *vol) {
+  int xsize = vol->xsize; 
+  int ysize = vol->ysize; 
+  int zsize = vol->zsize; 
+  
+  int gx, gy, gz;
+  int xsize_new = xsize*2-1;
+  int ysize_new = ysize*2-1;
+  int zsize_new = zsize*2-1;
+  int xysize = xsize*ysize;
+  int xysize_new = xsize_new*ysize_new;
+  float *data_new = new float[xsize_new*ysize_new*zsize_new];
+  
+  // Copy map to the finer grid
+  for (gx=0; gx<xsize; gx++)
+    for (gy=0; gy<ysize; gy++)
+      for (gz=0; gz<zsize; gz++)
+        data_new[2*gx + 2*gy*xsize_new + 2*gz*xysize_new] = \
+          vol->data[gx + gy*xsize + gz*xysize];
+
+  // Perform cubic interpolation for the rest of the voxels
+
+  // x direction
+  for (gx=1; gx<xsize-2; gx++)
+    for (gy=0; gy<ysize; gy++)
+      for (gz=0; gz<zsize; gz++)
+        data_new[2*gx+1 + 2*gy*xsize_new + 2*gz*xysize_new] = \
+          cubic_interp(data_new[(2*gx-2) + 2*gy*xsize_new + 2*gz*xysize_new],
+                       data_new[(2*gx)   + 2*gy*xsize_new + 2*gz*xysize_new],
+                       data_new[(2*gx+2) + 2*gy*xsize_new + 2*gz*xysize_new],
+                       data_new[(2*gx+4) + 2*gy*xsize_new + 2*gz*xysize_new],
+                       0.5);
+  // borders
+  for (gy=0; gy<ysize; gy++)
+    for (gz=0; gz<zsize; gz++) {
+      // gx = 0
+      data_new[1 + 2*gy*xsize_new + 2*gz*xysize_new] = \
+        cubic_interp(data_new[0 + 2*gy*xsize_new + 2*gz*xysize_new],
+                     data_new[0 + 2*gy*xsize_new + 2*gz*xysize_new],
+                     data_new[2 + 2*gy*xsize_new + 2*gz*xysize_new],
+                     data_new[4 + 2*gy*xsize_new + 2*gz*xysize_new],
+                     0.5);
+      // gx = xsize-2
+      data_new[2*(xsize-2)+1 + 2*gy*xsize_new + 2*gz*xysize_new] = \
+        cubic_interp(data_new[2*(xsize-2)-2 + 2*gy*xsize_new + 2*gz*xysize_new],
+                     data_new[2*(xsize-2)   + 2*gy*xsize_new + 2*gz*xysize_new],
+                     data_new[2*(xsize-2)+2 + 2*gy*xsize_new + 2*gz*xysize_new],
+                     data_new[2*(xsize-2)+2 + 2*gy*xsize_new + 2*gz*xysize_new],
+                     0.5);
+    }
+
+  // y direction
+  for (gx=0; gx<xsize_new; gx++)
+    for (gy=1; gy<ysize-2; gy++)
+      for (gz=0; gz<zsize; gz++)
+        data_new[gx + (2*gy+1)*xsize_new + 2*gz*xysize_new] = \
+          cubic_interp(data_new[gx + (2*gy-2)*xsize_new + 2*gz*xysize_new],
+                       data_new[gx + (2*gy)*xsize_new   + 2*gz*xysize_new],
+                       data_new[gx + (2*gy+2)*xsize_new + 2*gz*xysize_new],
+                       data_new[gx + (2*gy+4)*xsize_new + 2*gz*xysize_new],
+                       0.5);
+  // borders
+  for (gx=0; gx<xsize_new; gx++)
+    for (gz=0; gz<zsize; gz++) {
+      // gy = 0
+      data_new[gx + 1*xsize_new + 2*gz*xysize_new] = \
+        cubic_interp(data_new[gx + 0*xsize_new + 2*gz*xysize_new],
+                     data_new[gx + 0*xsize_new + 2*gz*xysize_new],
+                     data_new[gx + 2*xsize_new + 2*gz*xysize_new],
+                     data_new[gx + 4*xsize_new + 2*gz*xysize_new],
+                     0.5);
+      // gy = ysize-2
+      data_new[gx + (2*(ysize-2)+1)*xsize_new + 2*gz*xysize_new] = \
+        cubic_interp(data_new[gx + (2*(ysize-2)-2)*xsize_new + 2*gz*xysize_new],
+                     data_new[gx + 2*(ysize-2)*xsize_new     + 2*gz*xysize_new],
+                     data_new[gx + (2*(ysize-2)+2)*xsize_new + 2*gz*xysize_new],
+                     data_new[gx + (2*(ysize-2)+2)*xsize_new + 2*gz*xysize_new],
+                     0.5);
+    }
+
+  // z direction
+  for (gx=0; gx<xsize_new; gx++)
+    for (gy=0; gy<ysize_new; gy++)
+      for (gz=1; gz<zsize-2; gz++)
+        data_new[gx + gy*xsize_new + (2*gz+1)*xysize_new] = \
+          cubic_interp(data_new[gx + gy*xsize_new + (2*gz-2)*xysize_new],
+                       data_new[gx + gy*xsize_new + (2*gz)*xysize_new],
+                       data_new[gx + gy*xsize_new + (2*gz+2)*xysize_new],
+                       data_new[gx + gy*xsize_new + (2*gz+4)*xysize_new],
+                       0.5);
+  // borders
+  for (gx=0; gx<xsize_new; gx++)
+    for (gy=0; gy<ysize_new; gy++) {
+      // gz = 0
+      data_new[gx + gy*xsize_new + 1*xysize_new] = \
+        cubic_interp(data_new[gx + gy*xsize_new + 0*xysize_new],
+                     data_new[gx + gy*xsize_new + 0*xysize_new],
+                     data_new[gx + gy*xsize_new + 2*xysize_new],
+                     data_new[gx + gy*xsize_new + 4*xysize_new],
+                     0.5);
+      // gz = zsize-2
+      data_new[gx + gy*xsize_new + (2*(zsize-2)+1)*xysize_new] = \
+        cubic_interp(data_new[gx + gy*xsize_new + (2*(zsize-2)-2)*xysize_new],
+                     data_new[gx + gy*xsize_new + 2*(zsize-2)*xysize_new],
+                     data_new[gx + gy*xsize_new + (2*(zsize-2)+2)*xysize_new],
+                     data_new[gx + gy*xsize_new + (2*(zsize-2)+2)*xysize_new],
+                     0.5);
+  }
+
+
+  vol->xsize = xsize_new;
+  vol->ysize = ysize_new;
+  vol->zsize = zsize_new;
+  //vscale(xdelta, 0.5);
+  //vscale(ydelta, 0.5);
+  //vscale(zdelta, 0.5);
+
+  delete[] vol->data;
+  vol->data = data_new;
+}
+
 void vol_moveto(VolumetricData *vol, float *com, float *pos){
   float origin[3] = {0.0, 0.0, 0.0};
   origin[0] = (float)vol->origin[0];
