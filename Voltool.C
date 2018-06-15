@@ -405,6 +405,183 @@ void binmask(VolumetricData *vol) {
   }
 }
 
+//Gaussian blurring (as a 3D convolution), but the kernel can easily be changed to something else
+void gauss3d(VolumetricData *vol, double sigma) {
+
+  //Right now, only works if resolution is the same in all map dimensions
+  double xdelta[3] = {(vol->xaxis[0] / (vol->xsize - 1)) , (vol->xaxis[1] / (vol->xsize - 1)) , (vol->xaxis[2] / (vol->xsize - 1))};
+
+  int xsize = vol->xsize; 
+  int ysize = vol->ysize; 
+  int zsize = vol->zsize; 
+
+ 
+  // Pre-divide by sqrt(3) in x/y/z dimensions to get "sigma" in 3D
+  sigma /= sqrt(3.);
+  
+  double delta = xdelta[0];
+  int step = (int)(3.*sigma/delta); // size of gaussian convolution
+  if (!step) return;
+  
+  // Build convolution kernel
+  int convsize = 2*step+1;
+  float *conv = new float[convsize*convsize*convsize];
+  memset(conv, 0, convsize*convsize*convsize*sizeof(float));
+
+/*
+  // Pad the map if required
+  if (flagsbits & USE_PADDING)
+    pad(vol, convsize, convsize, convsize, convsize, convsize, convsize);
+*/
+
+  int gridsize = xsize*ysize*zsize;
+  float *data_new = new float[gridsize];
+  memset(data_new, 0, gridsize*sizeof(float));
+  
+  double r2, norm=0.;
+  int cx, cy, cz; 
+  for (cz=0; cz<convsize; cz++)
+  for (cy=0; cy<convsize; cy++)
+  for (cx=0; cx<convsize; cx++) {
+    r2 = delta*delta*((cx-step)*(cx-step)+(cy-step)*(cy-step)+(cz-step)*(cz-step));
+    conv[cx + cy*convsize + cz*convsize*convsize] = exp(-0.5*r2/(sigma*sigma)); 
+    norm += conv[cx + cy*convsize + cz*convsize*convsize];
+  }
+  
+  // Normalize...
+  int n;
+  for (n=0; n<convsize*convsize*convsize; n++) {
+    conv[n] = conv[n]/norm;
+  }
+ 
+  // Apply convolution   
+//  if (!ops->trivial())
+  //  for (n=0; n<gridsize; n++) data[n] = ops->ConvertValue(data[n]);  
+  
+  int gx, gy, gz, hx, hy, hz; 
+  for (gz=0; gz<zsize; gz++)
+  for (gy=0; gy<ysize; gy++) 
+  for (gx=0; gx<xsize; gx++)
+  for (cz=0; cz<convsize; cz++)
+  for (cy=0; cy<convsize; cy++)
+  for (cx=0; cx<convsize; cx++) {
+    hx=gx+cx-step;
+    hy=gy+cy-step;
+    hz=gz+cz-step;
+    if (hx < 0 || hx >= xsize || hy < 0 || hy >= ysize || hz < 0 || hz >= zsize) {
+      continue;
+    }
+
+    data_new[gx + gy*xsize + gz*xsize*ysize] += vol->data[hx + hy*xsize + hz*xsize*ysize]*conv[cx + cy*convsize + cz*convsize*convsize];  
+  }
+  
+  //if (!ops->trivial())
+  //  for (n=0; n<gridsize; n++) data_new[n] = ops->ConvertAverage(data_new[n]);  
+  
+  delete[] vol->data;
+  vol->data = data_new;
+}
+
+// Fast Gaussian blur that takes advantage of the fact that the dimensions are separable.
+void gauss1d(VolumetricData *vol, double sigma) {
+  //Right now, only works if resolution is the same in all map dimensions
+  double xdelta[3] = {(vol->xaxis[0] / (vol->xsize - 1)) , (vol->xaxis[1] / (vol->xsize - 1)) , (vol->xaxis[2] / (vol->xsize - 1))};
+
+  int xsize = vol->xsize; 
+  int ysize = vol->ysize; 
+  int zsize = vol->zsize; 
+  
+  // Pre-divide by sqrt(3) in x/y/z dimensions to get "sigma" in 3D
+  sigma /= sqrt(3.);
+  
+  double delta = xdelta[0];
+  int step = (int)(3.*sigma/delta); // size of gaussian convolution
+  if (!step) return;
+
+  // Build convolution kernel
+  int convsize = 2*step+1;
+  float *conv = new float[convsize];
+  memset(conv, 0, convsize*sizeof(float));
+/*
+  // Pad the map if required
+  if (flagsbits & USE_PADDING)
+    pad(convsize, convsize, convsize, convsize, convsize, convsize);
+*/
+  int gridsize = xsize*ysize*zsize;
+  float *data_new = new float[gridsize];
+
+  double r2, norm=0.;
+  int c;
+  for (c=0; c<convsize; c++) {
+    r2 = delta*delta*(c-step)*(c-step);
+    conv[c] = (float) exp(-0.5*r2/(sigma*sigma)); 
+    norm += conv[c];
+  }
+  
+  // Normalize...
+
+  for (c=0; c<convsize; c++) {
+    conv[c] = conv[c]/norm;
+  }
+/* 
+  // Apply convolution   
+  int n;
+  if (!ops->trivial())
+    for (n=0; n<gridsize; n++) data[n] = ops->ConvertValue(data[n]);  
+*/
+  memset(data_new, 0, gridsize*sizeof(float));
+  
+  int gx, gy, gz, hx, hy, hz; 
+  for (gz=0; gz<zsize; gz++)
+  for (gy=0; gy<ysize; gy++)
+  for (gx=0; gx<xsize; gx++)
+  for (c=0; c<convsize; c++) {
+    hx=gx+c-step;
+    hy=gy;
+    hz=gz;
+    if (hx < 0 || hx >= xsize) continue;
+    data_new[gx + gy*xsize + gz*xsize*ysize] += vol->data[hx + hy*xsize + hz*xsize*ysize]*conv[c];
+  }
+
+  float *dataswap = vol->data;
+  vol->data = data_new;
+  data_new = dataswap;
+  memset(data_new, 0, gridsize*sizeof(float));
+
+  for (gz=0; gz<zsize; gz++)
+  for (gy=0; gy<ysize; gy++)
+  for (gx=0; gx<xsize; gx++)
+  for (c=0; c<convsize; c++) {
+    hx=gx;
+    hy=gy+c-step;
+    hz=gz;
+    if (hy < 0 || hy >= ysize) continue;
+    data_new[gx + gy*xsize + gz*xsize*ysize] += vol->data[hx + hy*xsize + hz*xsize*ysize]*conv[c];
+  }
+    
+  dataswap = vol->data;
+  vol->data = data_new;
+  data_new = dataswap;
+  memset(data_new, 0, gridsize*sizeof(float));
+  
+  for (gz=0; gz<zsize; gz++)
+  for (gy=0; gy<ysize; gy++)
+  for (gx=0; gx<xsize; gx++)
+  for (c=0; c<convsize; c++) {
+    hx=gx;
+    hy=gy;
+    hz=gz+c-step;
+    if (hz < 0 || hz >= zsize) continue;
+    data_new[gx + gy*xsize + gz*xsize*ysize] += vol->data[hx + hy*xsize + hz*xsize*ysize]*conv[c];
+  }
+/*
+  if (!ops->trivial())
+    for (n=0; n<gridsize; n++) data_new[n] = ops->ConvertAverage(data_new[n]);
+  */
+  delete[] vol->data;
+  vol->data = data_new;
+}
+
 void vol_moveto(VolumetricData *vol, float *com, float *pos){
   float origin[3] = {0.0, 0.0, 0.0};
   origin[0] = (float)vol->origin[0];

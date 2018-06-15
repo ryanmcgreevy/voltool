@@ -30,6 +30,8 @@ void downsample(VolumetricData *vol);
 void supersample(VolumetricData *vol);
 void sigma_scale(VolumetricData *vol);
 void binmask(VolumetricData *vol);
+void gauss3d(VolumetricData *vol, double sigma);
+void gauss1d(VolumetricData *vol, double sigma);
 void vol_com(VolumetricData *vol, float *com);
 void vol_moveto(VolumetricData *vol, float *com, float *pos);
 void vol_move(VolumetricData *vol,  float *mat);
