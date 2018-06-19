@@ -48,6 +48,7 @@ void gauss1d(VolumetricData *vol, double sigma);
 
 //binary ops
 void add(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvol, bool interp, bool USE_UNION);
+void subtract(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvol, bool interp, bool USE_UNION);
 
 //Volumetric data utilities
 void vol_com(VolumetricData *vol, float *com);
