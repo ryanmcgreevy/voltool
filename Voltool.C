@@ -25,6 +25,117 @@
 #include <sstream>
 #include "Voltool.h"
 
+/// creates axes, bounding box and allocates data based on 
+/// geometrical intersection of A and B
+void init_from_intersection(VolumetricData *mapA, VolumetricData *mapB, VolumetricData *newvol) {
+  int d;
+  
+  // Find intersection of A and B
+  // The following has been verified for orthog. cells
+  // (Does not work for non-orthog cells)
+  
+  for (d=0; d<3; d++) {
+    newvol->origin[d] = MAX(mapA->origin[d], mapB->origin[d]);
+    newvol->xaxis[d] = MAX(MIN(mapA->origin[d]+mapA->xaxis[d], mapB->origin[d]+mapB->xaxis[d]), newvol->origin[d]);
+    newvol->yaxis[d] = MAX(MIN(mapA->origin[d]+mapA->yaxis[d], mapB->origin[d]+mapB->yaxis[d]), newvol->origin[d]);
+    newvol->zaxis[d] = MAX(MIN(mapA->origin[d]+mapA->zaxis[d], mapB->origin[d]+mapB->zaxis[d]), newvol->origin[d]);
+  }
+    
+  vec_sub(newvol->xaxis, newvol->xaxis, newvol->origin);
+  vec_sub(newvol->yaxis, newvol->yaxis, newvol->origin);
+  vec_sub(newvol->zaxis, newvol->zaxis, newvol->origin);
+  
+  newvol->xsize = (int) MAX(dot_prod(newvol->xaxis,mapA->xaxis)*mapA->xsize/dot_prod(mapA->xaxis,mapA->xaxis), \
+                    dot_prod(newvol->xaxis,mapB->xaxis)*mapB->xsize/dot_prod(mapB->xaxis,mapB->xaxis));
+  newvol->ysize = (int) MAX(dot_prod(newvol->yaxis,mapA->yaxis)*mapA->ysize/dot_prod(mapA->yaxis,mapA->yaxis), \
+                    dot_prod(newvol->yaxis,mapB->yaxis)*mapB->ysize/dot_prod(mapB->yaxis,mapB->yaxis));
+  newvol->zsize = (int) MAX(dot_prod(newvol->zaxis,mapA->zaxis)*mapA->zsize/dot_prod(mapA->zaxis,mapA->zaxis), \
+                    dot_prod(newvol->zaxis,mapB->zaxis)*mapB->zsize/dot_prod(mapB->zaxis,mapB->zaxis));
+/*   
+  for (d=0; d<3; d++) {
+    newvol->xdelta[d] = newvol->xaxis[d]/(newvol->xsize-1);
+    newvol->ydelta[d] = newvol->yaxis[d]/(newvol->ysize-1);
+    newvol->zdelta[d] = newvol->zaxis[d]/(newvol->zsize-1);
+  }
+ */ 
+  // Create map...
+  if (newvol->data) delete[] newvol->data;
+  newvol->data = new float[newvol->xsize*newvol->ysize*newvol->zsize];
+}
+
+
+
+
+/// creates axes, bounding box and allocates data based on 
+/// geometrical union of A and B
+void init_from_union(VolumetricData *mapA, VolumetricData *mapB, VolumetricData *newvol) {
+  // Find union of A and B
+  // The following has been verified for orthog. cells
+  // (Does not work for non-orthog cells)
+  
+  vec_zero(newvol->xaxis);
+  vec_zero(newvol->yaxis);
+  vec_zero(newvol->zaxis);
+  
+  int d;
+  
+  for (d=0; d<3; d++) {
+    newvol->origin[d] = MIN(mapA->origin[d], mapB->origin[d]);
+  }
+  d=0;
+  newvol->xaxis[d] = MAX(MAX(mapA->origin[d]+mapA->xaxis[d], mapB->origin[d]+mapB->xaxis[d]), newvol->origin[d]);
+  d=1;
+  newvol->yaxis[d] = MAX(MAX(mapA->origin[d]+mapA->yaxis[d], mapB->origin[d]+mapB->yaxis[d]), newvol->origin[d]);
+  d=2;
+  newvol->zaxis[d] = MAX(MAX(mapA->origin[d]+mapA->zaxis[d], mapB->origin[d]+mapB->zaxis[d]), newvol->origin[d]);
+  
+  newvol->xaxis[0] -= newvol->origin[0];
+  newvol->yaxis[1] -= newvol->origin[1];
+  newvol->zaxis[2] -= newvol->origin[2];
+  
+  newvol->xsize = (int) MAX(dot_prod(newvol->xaxis,mapA->xaxis)*mapA->xsize/dot_prod(mapA->xaxis,mapA->xaxis), \
+                    dot_prod(newvol->xaxis,mapB->xaxis)*mapB->xsize/dot_prod(mapB->xaxis,mapB->xaxis));
+  newvol->ysize = (int) MAX(dot_prod(newvol->yaxis,mapA->yaxis)*mapA->ysize/dot_prod(mapA->yaxis,mapA->yaxis), \
+                    dot_prod(newvol->yaxis,mapB->yaxis)*mapB->ysize/dot_prod(mapB->yaxis,mapB->yaxis));
+  newvol->zsize = (int) MAX(dot_prod(newvol->zaxis,mapA->zaxis)*mapA->zsize/dot_prod(mapA->zaxis,mapA->zaxis), \
+                    dot_prod(newvol->zaxis,mapB->zaxis)*mapB->zsize/dot_prod(mapB->zaxis,mapB->zaxis));
+/*  
+  for (d=0; d<3; d++) {
+    xdelta[d] = xaxis[d]/(xsize-1);
+    ydelta[d] = yaxis[d]/(ysize-1);
+    zdelta[d] = zaxis[d]/(zsize-1);
+  }
+  */
+  // Create map...
+  if (newvol->data) delete[] newvol->data;
+  newvol->data = new float[newvol->xsize*newvol->ysize*newvol->zsize];
+}
+
+
+
+void init_from_identity(VolumetricData *mapA, VolumetricData *newvol) {
+
+  vec_copy(newvol->origin, mapA->origin);
+  vec_copy(newvol->xaxis, mapA->xaxis);
+  vec_copy(newvol->yaxis, mapA->yaxis);
+  vec_copy(newvol->zaxis, mapA->zaxis); 
+  
+  newvol->xsize = mapA->xsize;
+  newvol->ysize = mapA->ysize;
+  newvol->zsize = mapA->zsize;
+/*    
+  int d;
+  for (d=0; d<3; d++) {
+    xdelta[d] = xaxis[d]/(xsize-1);
+    ydelta[d] = yaxis[d]/(ysize-1);
+    zdelta[d] = zaxis[d]/(zsize-1);
+  }
+  */
+  // Create map...
+  if (newvol->data) delete[] newvol->data;
+  newvol->data = new float[newvol->xsize*newvol->ysize*newvol->zsize];
+}
+
 // Pad each side of the volmap's grid with zeros. Negative padding results
 // in a trimming of the map
 void pad(VolumetricData *vol, int padxm, int padxp, int padym, int padyp, int padzm, int padzp) {
@@ -580,6 +691,63 @@ void gauss1d(VolumetricData *vol, double sigma) {
   */
   delete[] vol->data;
   vol->data = data_new;
+}
+
+void add(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvol, bool interp, bool USE_UNION) {
+
+  int gx, gy, gz;
+
+  // adding maps by spatial coords is slower than doing it directly, but
+  // allows for precisely subtracting unaligned maps, and/or maps of
+  // different resolutions
+
+//  if (flagsbits & USE_INTERP) interp = true;
+
+  if ( USE_UNION) {
+
+    // UNION VERSION
+      
+    init_from_union(mapA, mapB, newvol);
+
+    // use a 'safe' version of voxel_value_interpolate_from_coord
+    // that returns zero if coordinate is outside the map
+
+    for (gx=0; gx<newvol->xsize; gx++)
+      for (gy=0; gy<newvol->ysize; gy++)
+        for (gz=0; gz<newvol->zsize; gz++) {
+          float x, y, z;
+          voxel_coord(gx, gy, gz, x, y, z, newvol);
+
+          if (interp) newvol->data[gz*newvol->xsize*newvol->ysize + gy*newvol->xsize + gx] = \
+            mapA->voxel_value_interpolate_from_coord(x,y,z) + \
+            mapB->voxel_value_interpolate_from_coord(x,y,z);
+          else newvol->data[gz*newvol->xsize*newvol->ysize + gy*newvol->xsize + gx] = \
+            mapA->voxel_value_from_coord(x,y,z) + \
+            mapB->voxel_value_from_coord(x,y,z);
+        }
+
+  } else {
+  
+    // INTERSECTION VERSION
+    
+    
+    init_from_intersection(mapA, mapB, newvol);
+  
+    for (gx=0; gx<newvol->xsize; gx++)
+      for (gy=0; gy<newvol->ysize; gy++)
+        for (gz=0; gz<newvol->zsize; gz++) {
+          float x, y, z;
+          voxel_coord(gx, gy, gz, x, y, z, newvol);
+          if (interp) newvol->data[gz*newvol->xsize*newvol->ysize + gy*newvol->xsize + gx] = \
+            mapA->voxel_value_interpolate_from_coord(x,y,z) + \
+            mapB->voxel_value_interpolate_from_coord(x,y,z);
+          else newvol->data[gz*newvol->xsize*newvol->ysize + gy*newvol->xsize + gx] = \
+            mapA->voxel_value_from_coord(x,y,z) + \
+            mapB->voxel_value_from_coord(x,y,z);
+        }
+
+  }
+
 }
 
 void vol_moveto(VolumetricData *vol, float *com, float *pos){

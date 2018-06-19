@@ -20,6 +20,18 @@ inline void vectrans(float *npoint, float *mat, double *vec){
   npoint[2]=vec[0]*mat[2]+vec[1]*mat[6]+vec[2]*mat[10];
 }
 
+inline void voxel_coord(int gx, int gy, int gz, float &x, float &y, float &z, VolumetricData *vol){
+  double delta[3] = {0.0, 0.0, 0.0};
+  delta[0] = (vol->xaxis[0] / (vol->xsize - 1)) + (vol->yaxis[0] / (vol->ysize - 1)) + (vol->zaxis[0] / (vol->zsize - 1));
+  delta[1] = (vol->xaxis[1] / (vol->xsize - 1)) + (vol->yaxis[1] / (vol->ysize - 1)) + (vol->zaxis[1] / (vol->zsize - 1));
+  delta[2] = (vol->xaxis[2] / (vol->xsize - 1)) + (vol->yaxis[2] / (vol->ysize - 1)) + (vol->zaxis[2] / (vol->zsize - 1));
+
+  x = vol->origin[0] + (gx * delta[0]);
+  y = vol->origin[1] + (gy * delta[1]);
+  z = vol->origin[2] + (gz * delta[2]);
+}
+
+//unary ops
 void pad(VolumetricData *vol, int padxm, int padxp, int padym, int padyp, int padzm, int padzp);
 void crop(VolumetricData *vol, double crop_minx, double crop_miny, double crop_minz, double crop_maxx, double crop_maxy, double crop_maxz);
 void clamp(VolumetricData *vol, float min_value, float max_value);
@@ -32,6 +44,12 @@ void sigma_scale(VolumetricData *vol);
 void binmask(VolumetricData *vol);
 void gauss3d(VolumetricData *vol, double sigma);
 void gauss1d(VolumetricData *vol, double sigma);
+
+
+//binary ops
+void add(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvol, bool interp, bool USE_UNION);
+
+//Volumetric data utilities
 void vol_com(VolumetricData *vol, float *com);
 void vol_moveto(VolumetricData *vol, float *com, float *pos);
 void vol_move(VolumetricData *vol,  float *mat);

@@ -145,6 +145,13 @@ inline void vec_copy(float *v1, const float *v2) {
   v1[2] = v2[2];
 }
 
+/// copy the first 3 elements from v2 to v1
+inline void vec_copy(double *v1, const double *v2) {
+  v1[0] = v2[0];
+  v1[1] = v2[1];
+  v1[2] = v2[2];
+}
+
 /// normalizes the 3-vector to length one and returns the pointer
 /// note that this changes the vector
 extern float * vec_normalize(float *);
@@ -152,6 +159,14 @@ extern float * vec_normalize(float *);
 /// subtract 3rd vector from 2nd and put into 1st
 /// in other words, a = b - c
 inline void vec_sub(float *a, const float *b, const float *c) {
+  a[0]=b[0]-c[0];
+  a[1]=b[1]-c[1];
+  a[2]=b[2]-c[2];
+}
+
+/// subtract 3rd vector from 2nd and put into 1st
+/// in other words, a = b - c
+inline void vec_sub(double *a, const double *b, const double *c) {
   a[0]=b[0]-c[0];
   a[1]=b[1]-c[1];
   a[2]=b[2]-c[2];
@@ -222,6 +237,12 @@ inline void vec_lerp(float *a, const float *b, const float *c, float frac) {
 }
 
 inline void vec_zero(float *a) {
+  a[0] = 0.0f;
+  a[1] = 0.0f;
+  a[2] = 0.0f;
+}
+
+inline void vec_zero(double *a) {
   a[0] = 0.0f;
   a[1] = 0.0f;
   a[2] = 0.0f;
