@@ -786,6 +786,37 @@ void multiply(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvo
 
 }
 
+void average(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvol, bool interp, bool USE_UNION) {
+
+  int gx, gy, gz;
+
+  // adding maps by spatial coords is slower than doing it directly, but
+  // allows for precisely subtracting unaligned maps, and/or maps of
+  // different resolutions
+
+  if ( USE_UNION) {
+    // UNION VERSION
+    init_from_union(mapA, mapB, newvol);
+  } else {
+    // INTERSECTION VERSION
+    init_from_intersection(mapA, mapB, newvol);
+  }
+  for (gx=0; gx<newvol->xsize; gx++)
+    for (gy=0; gy<newvol->ysize; gy++)
+      for (gz=0; gz<newvol->zsize; gz++) {
+        float x, y, z;
+        voxel_coord(gx, gy, gz, x, y, z, newvol);
+
+        if (interp) newvol->data[gz*newvol->xsize*newvol->ysize + gy*newvol->xsize + gx] = \
+          (mapA->voxel_value_interpolate_from_coord(x,y,z) + \
+          mapB->voxel_value_interpolate_from_coord(x,y,z)) / 2;
+        else newvol->data[gz*newvol->xsize*newvol->ysize + gy*newvol->xsize + gx] = \
+          (mapA->voxel_value_from_coord(x,y,z) + \
+          mapB->voxel_value_from_coord(x,y,z)) / 2;
+      }
+
+}
+
 void vol_moveto(VolumetricData *vol, float *com, float *pos){
   float origin[3] = {0.0, 0.0, 0.0};
   origin[0] = (float)vol->origin[0];
