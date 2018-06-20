@@ -40,15 +40,11 @@ void move(AtomSel *sel, Matrix4 mat, MoleculeList *mlist, float *framepos){
 }
 
 
-double density_calc_cc(VolumetricData *volmapA, VolumetricData *synthvol, float resolution) {
+double density_calc_cc(VolumetricData *volmapA, VolumetricData *volmapB, double thresholddensity) {
 
-  double thresholddensity = 0.1;
-  float return_cc = 0;
   double cc = 0.0;
-  
-  cc_threaded(synthvol, volmapA, &cc, thresholddensity);
-  return_cc += cc;  
-  return return_cc;
+  cc_threaded(volmapA, volmapB, &cc, thresholddensity);
+  return cc;
 }
 
 double calc_cc (AtomSel *sel, VolumetricData *volmapA, float resolution, MoleculeList *mlist, float *framepos) {
@@ -230,7 +226,7 @@ void density_rotate(int stride, int max_rot, float *com, float *returncc, int *b
         //printf("filename: %s\n", filename.c_str());
         //volmap_write_dx_file(synthvol, filename.c_str());
         num++;
-        float cc = density_calc_cc(volmapA, synthvol, resolution);
+        float cc = density_calc_cc(volmapA, synthvol, 0.1);
   //      printf ("CC: %f\n", cc); 
         if (cc > *returncc) {
           *returncc = cc;
@@ -2040,7 +2036,7 @@ int density_add(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inter
       "              -i2 <input map> specifies new density filename to load.\n"
       "              -mol2 <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol2 <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
-      "   options: \n"
+      "    options: \n"
       "              -union use union of input maps for operation\n"
       "              -nointerp do not use interpolation for operation\n"
       "              -o <filename> write moved density to file.\n",
@@ -2220,7 +2216,7 @@ int density_subtract(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *
       "              -i2 <input map> specifies new density filename to load.\n"
       "              -mol2 <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol2 <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
-      "   options: \n"
+      "    options: \n"
       "              -union use union of input maps for operation\n"
       "              -nointerp do not use interpolation for operation\n"
       "              -o <filename> write moved density to file.\n",
@@ -2400,7 +2396,7 @@ int density_multiply(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *
       "              -i2 <input map> specifies new density filename to load.\n"
       "              -mol2 <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol2 <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
-      "   options: \n"
+      "    options: \n"
       "              -union use union of input maps for operation\n"
       "              -nointerp do not use interpolation for operation\n"
       "              -o <filename> write moved density to file.\n",
@@ -2580,7 +2576,7 @@ int density_average(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *i
       "              -i2 <input map> specifies new density filename to load.\n"
       "              -mol2 <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol2 <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
-      "   options: \n"
+      "    options: \n"
       "              -union use union of input maps for operation\n"
       "              -nointerp do not use interpolation for operation\n"
       "              -o <filename> write moved density to file.\n",
@@ -2750,6 +2746,164 @@ int density_average(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *i
 
 }
 
+int density_correlate(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
+  if (argc < 3) {
+    Tcl_SetResult(interp, (char *) "usage: voltool "
+      "correlate <input map 1> <input map 2> \n"
+      "    input options:  -i1 <input map> specifies new density filename to load.\n"
+      "              -mol1 <molid> specifies an already loaded density's molid for use as target\n"
+      "              -vol1 <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
+      "              -i2 <input map> specifies new density filename to load.\n"
+      "              -mol2 <molid> specifies an already loaded density's molid for use as target\n"
+      "              -vol2 <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
+      "    options: \n"
+      "              -thresholddensity <x> (ignores voxels with values below x threshold)\n",
+      TCL_STATIC);
+    return TCL_ERROR;
+  }
+
+
+  int molid1 = -1;
+  int volid1 = 0;
+  const char *input_map1 = NULL;
+  int molid2 = -1;
+  int volid2 = 0;
+  const char *input_map2 = NULL;
+  double thresholddensity = -FLT_MAX;
+  
+  MoleculeList *mlist = app->moleculeList;
+  
+  for (int i=0; i < argc; i++) {
+    char *opt = Tcl_GetStringFromObj(objv[i], NULL);
+    if (!strcmp(opt, "-i1")) {
+      if (i == argc-1) {
+        Tcl_AppendResult(interp, "No input map specified",NULL);
+        return TCL_ERROR;
+      }
+
+      FileSpec spec;
+      spec.waitfor = FileSpec::WAIT_BACK; // shouldn't this be waiting for all?
+      input_map1 = Tcl_GetStringFromObj(objv[1+i], NULL);
+      molid1 = app->molecule_new(input_map1,0,1);
+      int ret_val = app->molecule_load(molid1, input_map1,app->guess_filetype(input_map1),&spec);
+      if (ret_val < 0) return TCL_ERROR;
+    }
+
+
+    if (!strcmp(opt, "-mol1")) {
+      if (i == argc-1) {
+        Tcl_AppendResult(interp, "No molid specified",NULL);
+        return TCL_ERROR;
+      } else if ( Tcl_GetIntFromObj(interp, objv[i+1], &molid1) != TCL_OK) {
+        Tcl_AppendResult(interp, "\n molid incorrectly specified",NULL);
+        return TCL_ERROR;
+      }
+    }
+
+    if (!strcmp(opt, "-vol1")) {
+      if (i == argc-1){
+        Tcl_AppendResult(interp, "No volume id specified",NULL);
+        return TCL_ERROR;
+      } else if ( Tcl_GetIntFromObj(interp, objv[i+1], &volid1) != TCL_OK) {
+        Tcl_AppendResult(interp, "\n volume id incorrectly specified",NULL);
+        return TCL_ERROR;
+      }
+    }
+    
+    if (!strcmp(opt, "-i2")) {
+      if (i == argc-1) {
+        Tcl_AppendResult(interp, "No input map specified",NULL);
+        return TCL_ERROR;
+      }
+
+      FileSpec spec;
+      spec.waitfor = FileSpec::WAIT_BACK; // shouldn't this be waiting for all?
+      input_map2 = Tcl_GetStringFromObj(objv[1+i], NULL);
+      molid2 = app->molecule_new(input_map2,0,1);
+      int ret_val = app->molecule_load(molid2, input_map2,app->guess_filetype(input_map2),&spec);
+      if (ret_val < 0) return TCL_ERROR;
+    }
+
+
+    if (!strcmp(opt, "-mol2")) {
+      if (i == argc-1) {
+        Tcl_AppendResult(interp, "No molid specified",NULL);
+        return TCL_ERROR;
+      } else if ( Tcl_GetIntFromObj(interp, objv[i+1], &molid2) != TCL_OK) {
+        Tcl_AppendResult(interp, "\n molid incorrectly specified",NULL);
+        return TCL_ERROR;
+      }
+    }
+
+    if (!strcmp(opt, "-vol2")) {
+      if (i == argc-1){
+        Tcl_AppendResult(interp, "No volume id specified",NULL);
+        return TCL_ERROR;
+      } else if ( Tcl_GetIntFromObj(interp, objv[i+1], &volid2) != TCL_OK) {
+        Tcl_AppendResult(interp, "\n volume id incorrectly specified",NULL);
+        return TCL_ERROR;
+      }
+    }
+    
+    if (!strcmp(opt, "-thresholddensity")) {
+      if (i == argc-1){
+        Tcl_AppendResult(interp, "No threshold specified",NULL);
+        return TCL_ERROR;
+      } else if ( Tcl_GetDoubleFromObj(interp, objv[i+1], &thresholddensity) != TCL_OK) {
+        Tcl_AppendResult(interp, "\n threshold incorrectly specified",NULL);
+        return TCL_ERROR;
+      }
+    }
+    
+  }
+  
+  Molecule *volmol1 = NULL;
+  VolumetricData *volmapA = NULL;
+  if (molid1 > -1) {
+    volmol1 = mlist->mol_from_id(molid1);
+    if (volmol1 == NULL) {
+      Tcl_AppendResult(interp, "\n invalid molecule specified",NULL);
+      return TCL_ERROR;
+    }
+
+    if (volmapA == NULL) 
+      volmapA = volmol1->modify_volume_data(volid1);
+  } else {
+    Tcl_AppendResult(interp, "\n no target volume specified",NULL);
+    return TCL_ERROR;
+  }
+  if (volmapA == NULL) {
+    Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
+    return TCL_ERROR;
+  }
+ 
+  Molecule *volmol2 = NULL;
+  VolumetricData *volmapB = NULL;
+  if (molid2 > -1) {
+    volmol2 = mlist->mol_from_id(molid2);
+    if (volmol2 == NULL) {
+      Tcl_AppendResult(interp, "\n invalid molecule specified",NULL);
+      return TCL_ERROR;
+    }
+
+    if (volmapB == NULL) 
+      volmapB = volmol2->modify_volume_data(volid2);
+  } else {
+    Tcl_AppendResult(interp, "\n no target volume specified",NULL);
+    return TCL_ERROR;
+  }
+  if (volmapB == NULL) {
+    Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
+    return TCL_ERROR;
+  }
+  
+  double return_cc = 0.0;
+  cc_threaded(volmapA, volmapB, &return_cc, thresholddensity);
+
+  Tcl_SetObjResult(interp, Tcl_NewDoubleObj(return_cc));
+  return TCL_OK;
+}
+
 int obj_voltool(ClientData cd, Tcl_Interp *interp, int argc,
                             Tcl_Obj * const objv[]){
   if (argc < 2) {
@@ -2780,6 +2934,7 @@ int obj_voltool(ClientData cd, Tcl_Interp *interp, int argc,
       "diff         -- subtract map2 from map1\n"
       "mult         -- multiply map1 and map2\n"
       "avg          -- average two input maps into one\n"
+      "correlate    -- calculates the cross-correlation coefficient between two maps\n"
       ,
       TCL_STATIC);
     return TCL_ERROR;
@@ -2829,6 +2984,8 @@ int obj_voltool(ClientData cd, Tcl_Interp *interp, int argc,
     return density_multiply(app, argc-1, objv+1, interp);
   if (!strupncmp(argv1, "avg", CMDLEN))
     return density_average(app, argc-1, objv+1, interp);
+  if (!strupncmp(argv1, "correlate", CMDLEN))
+    return density_correlate(app, argc-1, objv+1, interp);
 
   Tcl_SetResult(interp, (char *) "Type 'voltool' for summary of usage\n", TCL_VOLATILE);
   return TCL_OK;

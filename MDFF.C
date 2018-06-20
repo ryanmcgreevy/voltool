@@ -34,6 +34,15 @@
 #include "QuickSurf.h"
 #include <math.h>
 #include "MDFF.h"
+#include "Voltool.h"
+#include <stdio.h>
+#include <stdint.h>
+
+static inline int myisnan(float f)
+{
+      union { float f; uint32_t x; } u = { f };
+          return (u.x << 1) > 0xff000000u;
+}
 
 typedef struct{
   double mapA_sum;
@@ -46,6 +55,7 @@ typedef struct{
   float *volmap;
   const int *numvoxels;
   VolumetricData *qsVol;
+  VolumetricData *newvol;
   double threshold;
   wkf_mutex_t mtx;
 } ccparms;
@@ -60,12 +70,12 @@ static void * correlationthread(void *voidparms) {
 
   double origin[3] = {0.0, 0.0, 0.0};
   double delta[3] = {0.0, 0.0, 0.0};
-  origin[0] = parms->qsVol->origin[0];
-  origin[1] = parms->qsVol->origin[1];
-  origin[2] = parms->qsVol->origin[2];
-  delta[0] = (parms->qsVol->xaxis[0] / (parms->qsVol->xsize - 1)) + (parms->qsVol->yaxis[0] / (parms->qsVol->ysize - 1)) + (parms->qsVol->zaxis[0] / (parms->qsVol->zsize - 1));
-  delta[1] = (parms->qsVol->xaxis[1] / (parms->qsVol->xsize - 1)) + (parms->qsVol->yaxis[1] / (parms->qsVol->ysize - 1)) + (parms->qsVol->zaxis[1] / (parms->qsVol->zsize - 1));
-  delta[2] = (parms->qsVol->xaxis[2] / (parms->qsVol->xsize - 1)) + (parms->qsVol->yaxis[2] / (parms->qsVol->ysize - 1)) + (parms->qsVol->zaxis[2] / (parms->qsVol->zsize - 1));
+  origin[0] = parms->newvol->origin[0];
+  origin[1] = parms->newvol->origin[1];
+  origin[2] = parms->newvol->origin[2];
+  delta[0] = (parms->newvol->xaxis[0] / (parms->newvol->xsize - 1)) + (parms->newvol->yaxis[0] / (parms->newvol->ysize - 1)) + (parms->newvol->zaxis[0] / (parms->newvol->zsize - 1));
+  delta[1] = (parms->newvol->xaxis[1] / (parms->newvol->xsize - 1)) + (parms->newvol->yaxis[1] / (parms->newvol->ysize - 1)) + (parms->newvol->zaxis[1] / (parms->newvol->zsize - 1));
+  delta[2] = (parms->newvol->xaxis[2] / (parms->newvol->xsize - 1)) + (parms->newvol->yaxis[2] / (parms->newvol->ysize - 1)) + (parms->newvol->zaxis[2] / (parms->newvol->zsize - 1));
 
   double lmapA_sum = 0.0f;
   double lmapB_sum = 0.0f;
@@ -76,8 +86,8 @@ static void * correlationthread(void *voidparms) {
   while (wkf_threadlaunch_next_tile(voidparms, 16384, &tile) != WKF_SCHED_DONE) { 
     int x;
     for (x=tile.start; x<tile.end; x++) {
-      int xsize = parms->numvoxels[0];
-      int ysize = parms->numvoxels[1];
+      int xsize = parms->newvol->xsize;
+      int ysize = parms->newvol->ysize;
        
       gz = x / (ysize*xsize);
       gy = (x % (ysize*xsize)) / xsize;
@@ -90,12 +100,11 @@ static void * correlationthread(void *voidparms) {
       iz = origin[2] + (gz * delta[2]);
 #endif
 
-      float voxelA = parms->volmap[x];
+      float voxelA = parms->qsVol->voxel_value_interpolate_from_coord(ix,iy,iz);
       float voxelB = parms->targetVol->voxel_value_interpolate_from_coord(ix,iy,iz);
 //      float voxelB = parms->targetVol->voxel_value_from_coord(ix,iy,iz);
-
       // checks for nans (nans always false when self compared)
-      if (voxelB == voxelB) {
+      if (!myisnan(voxelB) && !myisnan(voxelA)) {
 // XXX what's up with this test vs. NULL?:
 //          if(parms->threshold == NULL){ 
 //          if (parms->threshold == 0.0){ 
@@ -204,6 +213,20 @@ int cc_threaded(VolumetricData *qsVol, const VolumetricData *targetVol, double *
 
   if (maxprocs < 1) 
     maxprocs = 1;
+
+
+  //get union map so we look at all the voxels
+  double origin[3] = {0., 0., 0.};
+  double xaxis[3] = {0., 0., 0.};
+  double yaxis[3] = {0., 0., 0.};
+  double zaxis[3] = {0., 0., 0.};
+  int numvoxelstmp [3] = {0, 0, 0};
+  float *data = NULL;
+  VolumetricData *newvol  = new VolumetricData("density map", origin, xaxis, yaxis, zaxis,
+                                 numvoxelstmp[0], numvoxelstmp[1], numvoxelstmp[2],
+                                 data);
+  init_from_union(qsVol, targetVol, newvol);
+  parms.newvol = newvol;
 
   int numprocs = maxprocs; // ever the optimist
   wkf_mutex_init(&parms.mtx);

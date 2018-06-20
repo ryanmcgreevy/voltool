@@ -64,11 +64,9 @@ void init_from_intersection(VolumetricData *mapA, VolumetricData *mapB, Volumetr
 }
 
 
-
-
 /// creates axes, bounding box and allocates data based on 
 /// geometrical union of A and B
-void init_from_union(VolumetricData *mapA, VolumetricData *mapB, VolumetricData *newvol) {
+void init_from_union(VolumetricData *mapA, const VolumetricData *mapB, VolumetricData *newvol) {
   // Find union of A and B
   // The following has been verified for orthog. cells
   // (Does not work for non-orthog cells)
@@ -78,7 +76,6 @@ void init_from_union(VolumetricData *mapA, VolumetricData *mapB, VolumetricData 
   vec_zero(newvol->zaxis);
   
   int d;
-  
   for (d=0; d<3; d++) {
     newvol->origin[d] = MIN(mapA->origin[d], mapB->origin[d]);
   }
@@ -125,6 +122,51 @@ void init_from_identity(VolumetricData *mapA, VolumetricData *newvol) {
   newvol->zsize = mapA->zsize;
 /*    
   int d;
+  for (d=0; d<3; d++) {
+    xdelta[d] = xaxis[d]/(xsize-1);
+    ydelta[d] = yaxis[d]/(ysize-1);
+    zdelta[d] = zaxis[d]/(zsize-1);
+  }
+  */
+  // Create map...
+  if (newvol->data) delete[] newvol->data;
+  newvol->data = new float[newvol->xsize*newvol->ysize*newvol->zsize];
+}
+
+
+/// creates axes, bounding box and allocates data based on 
+/// geometrical union of A and B
+void init_from_union(VolumetricData *mapA, VolumetricData *mapB, VolumetricData *newvol) {
+  // Find union of A and B
+  // The following has been verified for orthog. cells
+  // (Does not work for non-orthog cells)
+  
+  vec_zero(newvol->xaxis);
+  vec_zero(newvol->yaxis);
+  vec_zero(newvol->zaxis);
+  
+  int d;
+  for (d=0; d<3; d++) {
+    newvol->origin[d] = MIN(mapA->origin[d], mapB->origin[d]);
+  }
+  d=0;
+  newvol->xaxis[d] = MAX(MAX(mapA->origin[d]+mapA->xaxis[d], mapB->origin[d]+mapB->xaxis[d]), newvol->origin[d]);
+  d=1;
+  newvol->yaxis[d] = MAX(MAX(mapA->origin[d]+mapA->yaxis[d], mapB->origin[d]+mapB->yaxis[d]), newvol->origin[d]);
+  d=2;
+  newvol->zaxis[d] = MAX(MAX(mapA->origin[d]+mapA->zaxis[d], mapB->origin[d]+mapB->zaxis[d]), newvol->origin[d]);
+  
+  newvol->xaxis[0] -= newvol->origin[0];
+  newvol->yaxis[1] -= newvol->origin[1];
+  newvol->zaxis[2] -= newvol->origin[2];
+  
+  newvol->xsize = (int) MAX(dot_prod(newvol->xaxis,mapA->xaxis)*mapA->xsize/dot_prod(mapA->xaxis,mapA->xaxis), \
+                    dot_prod(newvol->xaxis,mapB->xaxis)*mapB->xsize/dot_prod(mapB->xaxis,mapB->xaxis));
+  newvol->ysize = (int) MAX(dot_prod(newvol->yaxis,mapA->yaxis)*mapA->ysize/dot_prod(mapA->yaxis,mapA->yaxis), \
+                    dot_prod(newvol->yaxis,mapB->yaxis)*mapB->ysize/dot_prod(mapB->yaxis,mapB->yaxis));
+  newvol->zsize = (int) MAX(dot_prod(newvol->zaxis,mapA->zaxis)*mapA->zsize/dot_prod(mapA->zaxis,mapA->zaxis), \
+                    dot_prod(newvol->zaxis,mapB->zaxis)*mapB->zsize/dot_prod(mapB->zaxis,mapB->zaxis));
+/*  
   for (d=0; d<3; d++) {
     xdelta[d] = xaxis[d]/(xsize-1);
     ydelta[d] = yaxis[d]/(ysize-1);
