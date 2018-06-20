@@ -160,8 +160,9 @@ int cc_threaded(VolumetricData *qsVol, const VolumetricData *targetVol, double *
 
   int physprocs = wkf_thread_numprocessors();
   int maxprocs = physprocs;
+ 
+/*
   float *voltexmap = NULL;
-
   // We can productively use only a few cores per socket due to the
   // limited memory bandwidth per socket. Also, hyperthreading
   // actually hurts performance.  These two considerations combined
@@ -213,7 +214,7 @@ int cc_threaded(VolumetricData *qsVol, const VolumetricData *targetVol, double *
 
   if (maxprocs < 1) 
     maxprocs = 1;
-
+*/
 
   //get union map so we look at all the voxels
   double origin[3] = {0., 0., 0.};
@@ -227,7 +228,7 @@ int cc_threaded(VolumetricData *qsVol, const VolumetricData *targetVol, double *
                                  data);
   init_from_intersection(qsVol, targetVol, newvol);
   parms.newvol = newvol;
-
+  long volsz = newvol->xsize*newvol->ysize*newvol->zsize;
   int numprocs = maxprocs; // ever the optimist
   wkf_mutex_init(&parms.mtx);
   wkf_tasktile_t tile;

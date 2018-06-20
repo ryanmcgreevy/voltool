@@ -27,7 +27,7 @@
 
 /// creates axes, bounding box and allocates data based on 
 /// geometrical intersection of A and B
-void init_from_intersection(VolumetricData *mapA, VolumetricData *mapB, VolumetricData *newvol) {
+void init_from_intersection(VolumetricData *mapA, const VolumetricData *mapB, VolumetricData *newvol) {
   int d;
   
   // Find intersection of A and B
@@ -65,7 +65,7 @@ void init_from_intersection(VolumetricData *mapA, VolumetricData *mapB, Volumetr
 
 /// creates axes, bounding box and allocates data based on 
 /// geometrical intersection of A and B
-void init_from_intersection(VolumetricData *mapA, const VolumetricData *mapB, VolumetricData *newvol) {
+void init_from_intersection(VolumetricData *mapA, VolumetricData *mapB, VolumetricData *newvol) {
   int d;
   
   // Find intersection of A and B
