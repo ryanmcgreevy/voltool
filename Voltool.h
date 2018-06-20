@@ -57,3 +57,4 @@ void vol_com(VolumetricData *vol, float *com);
 void vol_moveto(VolumetricData *vol, float *com, float *pos);
 void vol_move(VolumetricData *vol,  float *mat);
 void init_from_union(VolumetricData *mapA, const VolumetricData *mapB, VolumetricData *newvol);
+void init_from_intersection(VolumetricData *mapA, const VolumetricData *mapB, VolumetricData *newvol);

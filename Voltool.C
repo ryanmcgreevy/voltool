@@ -63,6 +63,44 @@ void init_from_intersection(VolumetricData *mapA, VolumetricData *mapB, Volumetr
   newvol->data = new float[newvol->xsize*newvol->ysize*newvol->zsize];
 }
 
+/// creates axes, bounding box and allocates data based on 
+/// geometrical intersection of A and B
+void init_from_intersection(VolumetricData *mapA, const VolumetricData *mapB, VolumetricData *newvol) {
+  int d;
+  
+  // Find intersection of A and B
+  // The following has been verified for orthog. cells
+  // (Does not work for non-orthog cells)
+  
+  for (d=0; d<3; d++) {
+    newvol->origin[d] = MAX(mapA->origin[d], mapB->origin[d]);
+    newvol->xaxis[d] = MAX(MIN(mapA->origin[d]+mapA->xaxis[d], mapB->origin[d]+mapB->xaxis[d]), newvol->origin[d]);
+    newvol->yaxis[d] = MAX(MIN(mapA->origin[d]+mapA->yaxis[d], mapB->origin[d]+mapB->yaxis[d]), newvol->origin[d]);
+    newvol->zaxis[d] = MAX(MIN(mapA->origin[d]+mapA->zaxis[d], mapB->origin[d]+mapB->zaxis[d]), newvol->origin[d]);
+  }
+    
+  vec_sub(newvol->xaxis, newvol->xaxis, newvol->origin);
+  vec_sub(newvol->yaxis, newvol->yaxis, newvol->origin);
+  vec_sub(newvol->zaxis, newvol->zaxis, newvol->origin);
+  
+  newvol->xsize = (int) MAX(dot_prod(newvol->xaxis,mapA->xaxis)*mapA->xsize/dot_prod(mapA->xaxis,mapA->xaxis), \
+                    dot_prod(newvol->xaxis,mapB->xaxis)*mapB->xsize/dot_prod(mapB->xaxis,mapB->xaxis));
+  newvol->ysize = (int) MAX(dot_prod(newvol->yaxis,mapA->yaxis)*mapA->ysize/dot_prod(mapA->yaxis,mapA->yaxis), \
+                    dot_prod(newvol->yaxis,mapB->yaxis)*mapB->ysize/dot_prod(mapB->yaxis,mapB->yaxis));
+  newvol->zsize = (int) MAX(dot_prod(newvol->zaxis,mapA->zaxis)*mapA->zsize/dot_prod(mapA->zaxis,mapA->zaxis), \
+                    dot_prod(newvol->zaxis,mapB->zaxis)*mapB->zsize/dot_prod(mapB->zaxis,mapB->zaxis));
+/*   
+  for (d=0; d<3; d++) {
+    newvol->xdelta[d] = newvol->xaxis[d]/(newvol->xsize-1);
+    newvol->ydelta[d] = newvol->yaxis[d]/(newvol->ysize-1);
+    newvol->zdelta[d] = newvol->zaxis[d]/(newvol->zsize-1);
+  }
+ */ 
+  // Create map...
+  if (newvol->data) delete[] newvol->data;
+  newvol->data = new float[newvol->xsize*newvol->ysize*newvol->zsize];
+}
+
 
 /// creates axes, bounding box and allocates data based on 
 /// geometrical union of A and B

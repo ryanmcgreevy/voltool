@@ -225,7 +225,7 @@ int cc_threaded(VolumetricData *qsVol, const VolumetricData *targetVol, double *
   VolumetricData *newvol  = new VolumetricData("density map", origin, xaxis, yaxis, zaxis,
                                  numvoxelstmp[0], numvoxelstmp[1], numvoxelstmp[2],
                                  data);
-  init_from_union(qsVol, targetVol, newvol);
+  init_from_intersection(qsVol, targetVol, newvol);
   parms.newvol = newvol;
 
   int numprocs = maxprocs; // ever the optimist
