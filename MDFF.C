@@ -69,13 +69,12 @@ static void * correlationthread(void *voidparms) {
   float ix,iy,iz;
 
   double origin[3] = {0.0, 0.0, 0.0};
-  double delta[3] = {0.0, 0.0, 0.0};
   origin[0] = parms->newvol->origin[0];
   origin[1] = parms->newvol->origin[1];
   origin[2] = parms->newvol->origin[2];
-  delta[0] = (parms->newvol->xaxis[0] / (parms->newvol->xsize - 1)) + (parms->newvol->yaxis[0] / (parms->newvol->ysize - 1)) + (parms->newvol->zaxis[0] / (parms->newvol->zsize - 1));
-  delta[1] = (parms->newvol->xaxis[1] / (parms->newvol->xsize - 1)) + (parms->newvol->yaxis[1] / (parms->newvol->ysize - 1)) + (parms->newvol->zaxis[1] / (parms->newvol->zsize - 1));
-  delta[2] = (parms->newvol->xaxis[2] / (parms->newvol->xsize - 1)) + (parms->newvol->yaxis[2] / (parms->newvol->ysize - 1)) + (parms->newvol->zaxis[2] / (parms->newvol->zsize - 1));
+  double xdelta[3] = {(parms->newvol->xaxis[0] / (parms->newvol->xsize - 1)), (parms->newvol->xaxis[1] / (parms->newvol->xsize - 1)), (parms->newvol->xaxis[2] / (parms->newvol->xsize - 1))};
+  double ydelta[3] = {(parms->newvol->yaxis[0] / (parms->newvol->ysize - 1)), (parms->newvol->yaxis[1] / (parms->newvol->ysize - 1)), (parms->newvol->yaxis[2] / (parms->newvol->ysize - 1))};
+  double zdelta[3] = {(parms->newvol->zaxis[0] / (parms->newvol->zsize - 1)), (parms->newvol->zaxis[1] / (parms->newvol->zsize - 1)), (parms->newvol->zaxis[2] / (parms->newvol->zsize - 1))};
 
   double lmapA_sum = 0.0f;
   double lmapB_sum = 0.0f;
@@ -95,9 +94,9 @@ static void * correlationthread(void *voidparms) {
 #if 0
       parms->qsVol->voxel_coord(gx,gy,gz,ix,iy,iz);
 #else
-      ix = origin[0] + (gx * delta[0]);
-      iy = origin[1] + (gy * delta[1]);
-      iz = origin[2] + (gz * delta[2]);
+      ix = origin[0] + (gx * xdelta[0]) + (gy * xdelta[1]) + (gz * xdelta[2]);
+      iy = origin[1] + (gx * ydelta[0]) + (gy * ydelta[1]) + (gz * ydelta[2]);
+      iz = origin[2] + (gx * zdelta[0]) + (gy * zdelta[1]) + (gz * zdelta[2]);
 #endif
 
       float voxelA = parms->qsVol->voxel_value_interpolate_from_coord(ix,iy,iz);
