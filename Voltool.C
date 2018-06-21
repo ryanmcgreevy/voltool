@@ -775,8 +775,6 @@ void gauss1d(VolumetricData *vol, double sigma) {
 
 void add(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvol, bool interp, bool USE_UNION) {
 
-  int gx, gy, gz;
-
   // adding maps by spatial coords is slower than doing it directly, but
   // allows for precisely subtracting unaligned maps, and/or maps of
   // different resolutions
@@ -788,26 +786,22 @@ void add(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvol, bo
     // INTERSECTION VERSION
     init_from_intersection(mapA, mapB, newvol);
   }
-  for (gx=0; gx<newvol->xsize; gx++)
-    for (gy=0; gy<newvol->ysize; gy++)
-      for (gz=0; gz<newvol->zsize; gz++) {
-        float x, y, z;
-        voxel_coord(gx, gy, gz, x, y, z, newvol);
+  for (int i=0; i<newvol->xsize*newvol->ysize*newvol->zsize; i++){
+    float x, y, z;
+    voxel_coord(i, x, y, z, newvol);
 
-        if (interp) newvol->data[gz*newvol->xsize*newvol->ysize + gy*newvol->xsize + gx] = \
-          mapA->voxel_value_interpolate_from_coord(x,y,z) + \
-          mapB->voxel_value_interpolate_from_coord(x,y,z);
-        else newvol->data[gz*newvol->xsize*newvol->ysize + gy*newvol->xsize + gx] = \
-          mapA->voxel_value_from_coord(x,y,z) + \
-          mapB->voxel_value_from_coord(x,y,z);
-      }
+    if (interp) newvol->data[i] = \
+      mapA->voxel_value_interpolate_from_coord(x,y,z) + \
+      mapB->voxel_value_interpolate_from_coord(x,y,z);
+    else newvol->data[i] = \
+      mapA->voxel_value_from_coord(x,y,z) + \
+      mapB->voxel_value_from_coord(x,y,z);
+  } 
 
 }
 
 void subtract(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvol, bool interp, bool USE_UNION) {
 
-  int gx, gy, gz;
-
   // adding maps by spatial coords is slower than doing it directly, but
   // allows for precisely subtracting unaligned maps, and/or maps of
   // different resolutions
@@ -819,26 +813,22 @@ void subtract(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvo
     // INTERSECTION VERSION
     init_from_intersection(mapA, mapB, newvol);
   }
-  for (gx=0; gx<newvol->xsize; gx++)
-    for (gy=0; gy<newvol->ysize; gy++)
-      for (gz=0; gz<newvol->zsize; gz++) {
-        float x, y, z;
-        voxel_coord(gx, gy, gz, x, y, z, newvol);
+  for (int i=0; i<newvol->xsize*newvol->ysize*newvol->zsize; i++){
+    float x, y, z;
+    voxel_coord(i, x, y, z, newvol);
 
-        if (interp) newvol->data[gz*newvol->xsize*newvol->ysize + gy*newvol->xsize + gx] = \
-          mapA->voxel_value_interpolate_from_coord(x,y,z) - \
-          mapB->voxel_value_interpolate_from_coord(x,y,z);
-        else newvol->data[gz*newvol->xsize*newvol->ysize + gy*newvol->xsize + gx] = \
-          mapA->voxel_value_from_coord(x,y,z) - \
-          mapB->voxel_value_from_coord(x,y,z);
-      }
+    if (interp) newvol->data[i] = \
+      mapA->voxel_value_interpolate_from_coord(x,y,z) - \
+      mapB->voxel_value_interpolate_from_coord(x,y,z);
+    else newvol->data[i] = \
+      mapA->voxel_value_from_coord(x,y,z) - \
+      mapB->voxel_value_from_coord(x,y,z);
+  } 
 
 }
 
 void multiply(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvol, bool interp, bool USE_UNION) {
 
-  int gx, gy, gz;
-
   // adding maps by spatial coords is slower than doing it directly, but
   // allows for precisely subtracting unaligned maps, and/or maps of
   // different resolutions
@@ -850,26 +840,22 @@ void multiply(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvo
     // INTERSECTION VERSION
     init_from_intersection(mapA, mapB, newvol);
   }
-  for (gx=0; gx<newvol->xsize; gx++)
-    for (gy=0; gy<newvol->ysize; gy++)
-      for (gz=0; gz<newvol->zsize; gz++) {
-        float x, y, z;
-        voxel_coord(gx, gy, gz, x, y, z, newvol);
+  for (int i=0; i<newvol->xsize*newvol->ysize*newvol->zsize; i++){
+    float x, y, z;
+    voxel_coord(i, x, y, z, newvol);
 
-        if (interp) newvol->data[gz*newvol->xsize*newvol->ysize + gy*newvol->xsize + gx] = \
-          mapA->voxel_value_interpolate_from_coord(x,y,z) * \
-          mapB->voxel_value_interpolate_from_coord(x,y,z);
-        else newvol->data[gz*newvol->xsize*newvol->ysize + gy*newvol->xsize + gx] = \
-          mapA->voxel_value_from_coord(x,y,z) * \
-          mapB->voxel_value_from_coord(x,y,z);
-      }
+    if (interp) newvol->data[i] = \
+      mapA->voxel_value_interpolate_from_coord(x,y,z) * \
+      mapB->voxel_value_interpolate_from_coord(x,y,z);
+    else newvol->data[i] = \
+      mapA->voxel_value_from_coord(x,y,z) * \
+      mapB->voxel_value_from_coord(x,y,z);
+  } 
 
 }
 
 void average(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvol, bool interp, bool USE_UNION) {
 
-  int gx, gy, gz;
-
   // adding maps by spatial coords is slower than doing it directly, but
   // allows for precisely subtracting unaligned maps, and/or maps of
   // different resolutions
@@ -881,19 +867,17 @@ void average(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvol
     // INTERSECTION VERSION
     init_from_intersection(mapA, mapB, newvol);
   }
-  for (gx=0; gx<newvol->xsize; gx++)
-    for (gy=0; gy<newvol->ysize; gy++)
-      for (gz=0; gz<newvol->zsize; gz++) {
-        float x, y, z;
-        voxel_coord(gx, gy, gz, x, y, z, newvol);
+  for (int i=0; i<newvol->xsize*newvol->ysize*newvol->zsize; i++){
+    float x, y, z;
+    voxel_coord(i, x, y, z, newvol);
 
-        if (interp) newvol->data[gz*newvol->xsize*newvol->ysize + gy*newvol->xsize + gx] = \
-          (mapA->voxel_value_interpolate_from_coord(x,y,z) + \
-          mapB->voxel_value_interpolate_from_coord(x,y,z)) / 2;
-        else newvol->data[gz*newvol->xsize*newvol->ysize + gy*newvol->xsize + gx] = \
-          (mapA->voxel_value_from_coord(x,y,z) + \
-          mapB->voxel_value_from_coord(x,y,z)) / 2;
-      }
+    if (interp) newvol->data[i] = \
+      (mapA->voxel_value_interpolate_from_coord(x,y,z) + \
+      mapB->voxel_value_interpolate_from_coord(x,y,z))/2;
+    else newvol->data[i] = \
+      (mapA->voxel_value_from_coord(x,y,z) + \
+      mapB->voxel_value_from_coord(x,y,z))/2;
+  } 
 
 }
 

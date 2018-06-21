@@ -14,21 +14,22 @@ inline float cubic_interp(float y0, float y1, float y2, float y3, float mu) {
   return (a0*mu*mu2+a1*mu2+a2*mu+a3);
 } 
 
-inline void vectrans(float *npoint, float *mat, double *vec){
-  npoint[0]=vec[0]*mat[0]+vec[1]*mat[4]+vec[2]*mat[8];
-  npoint[1]=vec[0]*mat[1]+vec[1]*mat[5]+vec[2]*mat[9];
-  npoint[2]=vec[0]*mat[2]+vec[1]*mat[6]+vec[2]*mat[10];
-}
+inline void voxel_coord(int i, float &x, float &y, float &z, VolumetricData *vol){
+  double xdelta[3] = {(vol->xaxis[0] / (vol->xsize - 1)), (vol->xaxis[1] / (vol->xsize - 1)), (vol->xaxis[2] / (vol->xsize - 1))};
+  double ydelta[3] = {(vol->yaxis[0] / (vol->ysize - 1)), (vol->yaxis[1] / (vol->ysize - 1)), (vol->yaxis[2] / (vol->ysize - 1))};
+  double zdelta[3] = {(vol->zaxis[0] / (vol->zsize - 1)), (vol->zaxis[1] / (vol->zsize - 1)), (vol->zaxis[2] / (vol->zsize - 1))};
+  
+  int xsize = vol->xsize;
+  int ysize = vol->ysize;
+   
+  int gz = i / (ysize*xsize);
+  int gy = (i % (ysize*xsize)) / xsize;
+  int gx = i % xsize;
+  
+  x = vol->origin[0] + (gx * xdelta[0]) + (gy * xdelta[1]) + (gz * xdelta[2]);
+  y = vol->origin[1] + (gx * ydelta[0]) + (gy * ydelta[1]) + (gz * ydelta[2]);
+  z = vol->origin[2] + (gx * zdelta[0]) + (gy * zdelta[1]) + (gz * zdelta[2]);
 
-inline void voxel_coord(int gx, int gy, int gz, float &x, float &y, float &z, VolumetricData *vol){
-  double delta[3] = {0.0, 0.0, 0.0};
-  delta[0] = (vol->xaxis[0] / (vol->xsize - 1)) + (vol->yaxis[0] / (vol->ysize - 1)) + (vol->zaxis[0] / (vol->zsize - 1));
-  delta[1] = (vol->xaxis[1] / (vol->xsize - 1)) + (vol->yaxis[1] / (vol->ysize - 1)) + (vol->zaxis[1] / (vol->zsize - 1));
-  delta[2] = (vol->xaxis[2] / (vol->xsize - 1)) + (vol->yaxis[2] / (vol->ysize - 1)) + (vol->zaxis[2] / (vol->zsize - 1));
-
-  x = vol->origin[0] + (gx * delta[0]);
-  y = vol->origin[1] + (gy * delta[1]);
-  z = vol->origin[2] + (gz * delta[2]);
 }
 
 //unary ops

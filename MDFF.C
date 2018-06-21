@@ -64,7 +64,7 @@ static void * correlationthread(void *voidparms) {
   wkf_tasktile_t tile;
   ccparms *parms = NULL;
   wkf_threadlaunch_getdata(voidparms, (void **) &parms);
-
+/*
   int gx,gy,gz;
   float ix,iy,iz;
 
@@ -75,7 +75,7 @@ static void * correlationthread(void *voidparms) {
   double xdelta[3] = {(parms->newvol->xaxis[0] / (parms->newvol->xsize - 1)), (parms->newvol->xaxis[1] / (parms->newvol->xsize - 1)), (parms->newvol->xaxis[2] / (parms->newvol->xsize - 1))};
   double ydelta[3] = {(parms->newvol->yaxis[0] / (parms->newvol->ysize - 1)), (parms->newvol->yaxis[1] / (parms->newvol->ysize - 1)), (parms->newvol->yaxis[2] / (parms->newvol->ysize - 1))};
   double zdelta[3] = {(parms->newvol->zaxis[0] / (parms->newvol->zsize - 1)), (parms->newvol->zaxis[1] / (parms->newvol->zsize - 1)), (parms->newvol->zaxis[2] / (parms->newvol->zsize - 1))};
-
+*/
   double lmapA_sum = 0.0f;
   double lmapB_sum = 0.0f;
   double lmapA_ss = 0.0f;
@@ -85,6 +85,7 @@ static void * correlationthread(void *voidparms) {
   while (wkf_threadlaunch_next_tile(voidparms, 16384, &tile) != WKF_SCHED_DONE) { 
     int x;
     for (x=tile.start; x<tile.end; x++) {
+/*
       int xsize = parms->newvol->xsize;
       int ysize = parms->newvol->ysize;
        
@@ -98,7 +99,9 @@ static void * correlationthread(void *voidparms) {
       iy = origin[1] + (gx * ydelta[0]) + (gy * ydelta[1]) + (gz * ydelta[2]);
       iz = origin[2] + (gx * zdelta[0]) + (gy * zdelta[1]) + (gz * zdelta[2]);
 #endif
-
+*/
+      float ix,iy,iz;
+      voxel_coord(x, ix, iy, iz, parms->newvol);     
       float voxelA = parms->qsVol->voxel_value_interpolate_from_coord(ix,iy,iz);
       float voxelB = parms->targetVol->voxel_value_interpolate_from_coord(ix,iy,iz);
 //      float voxelB = parms->targetVol->voxel_value_from_coord(ix,iy,iz);

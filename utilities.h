@@ -236,6 +236,13 @@ inline void vec_lerp(float *a, const float *b, const float *c, float frac) {
   vec_add(a, b, tmp);
 }
 
+// multiply the matrix mat with the vector vec (length 3)
+inline void vectrans(float *npoint, float *mat, double *vec){
+  npoint[0]=vec[0]*mat[0]+vec[1]*mat[4]+vec[2]*mat[8];
+  npoint[1]=vec[0]*mat[1]+vec[1]*mat[5]+vec[2]*mat[9];
+  npoint[2]=vec[0]*mat[2]+vec[1]*mat[6]+vec[2]*mat[10];
+}
+
 inline void vec_zero(float *a) {
   a[0] = 0.0f;
   a[1] = 0.0f;
