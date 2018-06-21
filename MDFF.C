@@ -218,7 +218,7 @@ int cc_threaded(VolumetricData *qsVol, const VolumetricData *targetVol, double *
     maxprocs = 1;
 */
 
-  //get union map so we look at all the voxels
+  //get intersection map so we look at all the overlapping voxels
   double origin[3] = {0., 0., 0.};
   double xaxis[3] = {0., 0., 0.};
   double yaxis[3] = {0., 0., 0.};

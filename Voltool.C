@@ -146,8 +146,6 @@ void init_from_union(VolumetricData *mapA, const VolumetricData *mapB, Volumetri
   newvol->data = new float[newvol->xsize*newvol->ysize*newvol->zsize];
 }
 
-
-
 void init_from_identity(VolumetricData *mapA, VolumetricData *newvol) {
 
   vec_copy(newvol->origin, mapA->origin);
