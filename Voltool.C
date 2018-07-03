@@ -267,34 +267,20 @@ void pad(VolumetricData *vol, int padxm, int padxp, int padym, int padyp, int pa
 }
 
 void vol_com(VolumetricData *vol, float *com){
-  double origin[3] = {0.0, 0.0, 0.0};
-  double delta[3] = {0.0, 0.0, 0.0};
-  origin[0] = vol->origin[0];
-  origin[1] = vol->origin[1];
-  origin[2] = vol->origin[2];
-  delta[0] = (vol->xaxis[0] / (vol->xsize - 1)) + (vol->yaxis[0] / (vol->ysize - 1)) + (vol->zaxis[0] / (vol->zsize - 1));
-  delta[1] = (vol->xaxis[1] / (vol->xsize - 1)) + (vol->yaxis[1] / (vol->ysize - 1)) + (vol->zaxis[1] / (vol->zsize - 1));
-  delta[2] = (vol->xaxis[2] / (vol->xsize - 1)) + (vol->yaxis[2] / (vol->ysize - 1)) + (vol->zaxis[2] / (vol->zsize - 1));
-
-  int xsize = vol->xsize;
-  int ysize = vol->ysize;
-
-  int gx,gy,gz;
   float ix,iy,iz;
   
   vec_zero(com);
   double mass = 0.0;
 
   for (int i = 0; i < vol->gridsize(); i++) {
-    gz = i / (ysize*xsize);
-    gy = (i % (ysize*xsize)) / xsize;
-    gx = i % xsize;
-    
-    ix = origin[0] + (gx * delta[0]);
-    iy = origin[1] + (gy * delta[1]);
-    iz = origin[2] + (gz * delta[2]);
-    float coord[3] = {ix,iy,iz};
+//for (int z = 0; z < vol->zsize; z++)
+//  for (int y = 0; y < vol->ysize; y++)
+//    for (int x = 0; x < vol->xsize; x++){
     float m = vol->data[i];
+    voxel_coord(i, ix, iy, iz, vol);
+   // float m = vol->voxel_value(x, y, z);
+   // voxel_coord(x,y,z,ix,iy,iz,vol); 
+    float coord[3] = {ix,iy,iz};    
     mass = mass+m;
     vec_scale(coord, m, coord);
     vec_add(com, com, coord); 

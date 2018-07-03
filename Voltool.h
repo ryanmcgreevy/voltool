@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "VolumetricData.h"
 #define MIN(X,Y) (((X)<(Y))? (X) : (Y))
 #define MAX(X,Y) (((X)>(Y))? (X) : (Y))
@@ -12,24 +13,32 @@ inline float cubic_interp(float y0, float y1, float y2, float y3, float mu) {
   float a3 = y1;
 
   return (a0*mu*mu2+a1*mu2+a2*mu+a3);
-} 
+}
+
+inline void voxel_coord(int x, int y, int z, float &gx, float &gy, float &gz, VolumetricData *vol){
+  float xdelta[3], ydelta[3], zdelta[3];
+  vol->cell_axes(xdelta, ydelta, zdelta);
+  
+  gx = vol->origin[0] + (x * xdelta[0]) + (y * ydelta[0]) + (z * zdelta[0]);
+  gy = vol->origin[1] + (x * xdelta[1]) + (y * ydelta[1]) + (z * zdelta[1]);
+  gz = vol->origin[2] + (x * xdelta[2]) + (y * ydelta[2]) + (z * zdelta[2]);
+ 
+}
 
 inline void voxel_coord(int i, float &x, float &y, float &z, VolumetricData *vol){
-  double xdelta[3] = {(vol->xaxis[0] / (vol->xsize - 1)), (vol->xaxis[1] / (vol->xsize - 1)), (vol->xaxis[2] / (vol->xsize - 1))};
-  double ydelta[3] = {(vol->yaxis[0] / (vol->ysize - 1)), (vol->yaxis[1] / (vol->ysize - 1)), (vol->yaxis[2] / (vol->ysize - 1))};
-  double zdelta[3] = {(vol->zaxis[0] / (vol->zsize - 1)), (vol->zaxis[1] / (vol->zsize - 1)), (vol->zaxis[2] / (vol->zsize - 1))};
-  
+  float xdelta[3], ydelta[3], zdelta[3];
+  vol->cell_axes(xdelta, ydelta, zdelta);
   int xsize = vol->xsize;
   int ysize = vol->ysize;
-   
-  int gz = i / (ysize*xsize);
-  int gy = (i % (ysize*xsize)) / xsize;
-  int gx = i % xsize;
   
-  x = vol->origin[0] + (gx * xdelta[0]) + (gy * xdelta[1]) + (gz * xdelta[2]);
-  y = vol->origin[1] + (gx * ydelta[0]) + (gy * ydelta[1]) + (gz * ydelta[2]);
-  z = vol->origin[2] + (gx * zdelta[0]) + (gy * zdelta[1]) + (gz * zdelta[2]);
+  int gz = i / (ysize*xsize);
+  int gy = (i / xsize) % ysize;
+  int gx = i % xsize;
 
+  x = vol->origin[0] + (gx * xdelta[0]) + (gy * ydelta[0]) + (gz * zdelta[0]);
+  y = vol->origin[1] + (gx * xdelta[1]) + (gy * ydelta[1]) + (gz * zdelta[1]);
+  z = vol->origin[2] + (gx * xdelta[2]) + (gy * ydelta[2]) + (gz * zdelta[2]);
+ 
 }
 
 //unary ops
