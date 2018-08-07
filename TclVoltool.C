@@ -1098,8 +1098,10 @@ int density_crop(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inte
 int density_clamp(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
   if (argc < 3) {
     Tcl_SetResult(interp, (char *) "usage: voltool "
-      "clamp -minmax <min, max> minmax voxel values> [options]\n"
-      "    options:  -i <input map> specifies new density filename to load.\n"
+      "clamp [options]\n"
+      "    options:  -min <min voxel value> Defaults to existing min.\n"
+      "              -max <max voxel value> Defaults to existing max.\n"
+      "              -i <input map> specifies new density filename to load.\n"
       "              -mol <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
       "              -o <filename> write moved density to file.\n",
@@ -1110,7 +1112,8 @@ int density_clamp(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *int
 
   int molid = -1;
   int volid = 0;
-  int minmax[2] = {0, 0};
+  double min = -FLT_MIN;
+  double max = FLT_MAX;
   const char *input_map = NULL;
   const char *outputmap = NULL;
   MoleculeList *mlist = app->moleculeList;
@@ -1152,27 +1155,24 @@ int density_clamp(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *int
       }
     }
     
-    int num1;
-    Tcl_Obj **vector;
-    if (!strcmp(opt, "-minmax")) {
+    if (!strcmp(opt, "-min")) {
       if (i == argc-1){
-        Tcl_AppendResult(interp, "No trim amounts specified",NULL);
+        Tcl_AppendResult(interp, "No minimum voxel specified",NULL);
         return TCL_ERROR;
-      } else if (Tcl_ListObjGetElements(interp, objv[i+1], &num1, &vector) != TCL_OK) {
-      return TCL_ERROR;
-      }
-    
-      for (int i=0; i<num1; i++) {
-        if (Tcl_GetIntFromObj(interp, vector[i], &minmax[i]) != TCL_OK) {
-          Tcl_SetResult(interp, (char *) "minmax: non-numeric in vector", TCL_STATIC);
-          return TCL_ERROR;
-        }
-      }
-      if (num1 != 2) {
-        Tcl_SetResult(interp, (char *) "minmax: incorrect number of values in vector", TCL_STATIC);
+      } else if ( Tcl_GetDoubleFromObj(interp, objv[i+1], &min) != TCL_OK) {
+        Tcl_AppendResult(interp, "\n minimum voxel incorrectly specified",NULL);
         return TCL_ERROR;
       }
+    }
     
+    if (!strcmp(opt, "-max")) {
+      if (i == argc-1){
+        Tcl_AppendResult(interp, "No maximum voxel specified",NULL);
+        return TCL_ERROR;
+      } else if ( Tcl_GetDoubleFromObj(interp, objv[i+1], &max) != TCL_OK) {
+        Tcl_AppendResult(interp, "\n maximum voxel incorrectly specified",NULL);
+        return TCL_ERROR;
+      }
     }
     
     if (!strcmp(opt, "-o")) {
@@ -1203,7 +1203,7 @@ int density_clamp(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *int
     Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
     return TCL_ERROR;
   }
-  clamp(volmapA, minmax[0], minmax[1]); 
+  clamp(volmapA, min, max); 
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
   if (outputmap != NULL) {
