@@ -389,7 +389,7 @@ int density_move(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inte
       "    options:  -i <input map> specifies new density filename to load.\n"
       "              -mol <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
-      "              -o <filename> write moved density to file.\n",
+      "              -o <filename> write density to file.\n",
       TCL_STATIC);
     return TCL_ERROR;
   }
@@ -496,7 +496,7 @@ int density_moveto(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *in
       "    options:  -i <input map> specifies new density filename to load.\n"
       "              -mol <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
-      "              -o <filename> write moved density to file.\n",
+      "              -o <filename> write density to file.\n",
       TCL_STATIC);
     return TCL_ERROR;
   }
@@ -866,7 +866,7 @@ int density_trim(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inte
       "    options:  -i <input map> specifies new density filename to load.\n"
       "              -mol <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
-      "              -o <filename> write moved density to file.\n",
+      "              -o <filename> write density to file.\n",
       TCL_STATIC);
     return TCL_ERROR;
   }
@@ -984,7 +984,7 @@ int density_crop(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inte
       "    options:  -i <input map> specifies new density filename to load.\n"
       "              -mol <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
-      "              -o <filename> write moved density to file.\n",
+      "              -o <filename> write density to file.\n",
       TCL_STATIC);
     return TCL_ERROR;
   }
@@ -1104,7 +1104,7 @@ int density_clamp(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *int
       "              -i <input map> specifies new density filename to load.\n"
       "              -mol <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
-      "              -o <filename> write moved density to file.\n",
+      "              -o <filename> write density to file.\n",
       TCL_STATIC);
     return TCL_ERROR;
   }
@@ -1220,7 +1220,7 @@ int density_smult(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *int
       "    options:  -i <input map> specifies new density filename to load.\n"
       "              -mol <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
-      "              -o <filename> write moved density to file.\n",
+      "              -o <filename> write density to file.\n",
       TCL_STATIC);
     return TCL_ERROR;
   }
@@ -1325,7 +1325,7 @@ int density_smooth(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *in
       "    options:  -i <input map> specifies new density filename to load.\n"
       "              -mol <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
-      "              -o <filename> write moved density to file.\n",
+      "              -o <filename> write density to file.\n",
       TCL_STATIC);
     return TCL_ERROR;
   }
@@ -1430,7 +1430,7 @@ int density_sadd(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inte
       "    options:  -i <input map> specifies new density filename to load.\n"
       "              -mol <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
-      "              -o <filename> write moved density to file.\n",
+      "              -o <filename> write density to file.\n",
       TCL_STATIC);
     return TCL_ERROR;
   }
@@ -1535,7 +1535,7 @@ int density_range(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *int
       "    options:  -i <input map> specifies new density filename to load.\n"
       "              -mol <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
-      "              -o <filename> write moved density to file.\n",
+      "              -o <filename> write density to file.\n",
       TCL_STATIC);
     return TCL_ERROR;
   }
@@ -1653,7 +1653,7 @@ int density_downsample(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp
       "    options:  -i <input map> specifies new density filename to load.\n"
       "              -mol <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
-      "              -o <filename> write moved density to file.\n",
+      "              -o <filename> write density to file.\n",
       TCL_STATIC);
     return TCL_ERROR;
   }
@@ -1748,7 +1748,7 @@ int density_supersample(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Inter
       "    options:  -i <input map> specifies new density filename to load.\n"
       "              -mol <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
-      "              -o <filename> write moved density to file.\n",
+      "              -o <filename> write density to file.\n",
       TCL_STATIC);
     return TCL_ERROR;
   }
@@ -1843,7 +1843,7 @@ int density_sigma(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *int
       "    options:  -i <input map> specifies new density filename to load.\n"
       "              -mol <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
-      "              -o <filename> write moved density to file.\n",
+      "              -o <filename> write density to file.\n",
       TCL_STATIC);
     return TCL_ERROR;
   }
@@ -1938,7 +1938,7 @@ int density_binmask(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *i
       "    options:  -i <input map> specifies new density filename to load.\n"
       "              -mol <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
-      "              -o <filename> write moved density to file.\n",
+      "              -o <filename> write density to file.\n",
       TCL_STATIC);
     return TCL_ERROR;
   }
@@ -2039,7 +2039,7 @@ int density_add(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inter
       "    options: \n"
       "              -union use union of input maps for operation\n"
       "              -nointerp do not use interpolation for operation\n"
-      "              -o <filename> write moved density to file.\n",
+      "              -o <filename> write density to file.\n",
       TCL_STATIC);
     return TCL_ERROR;
   }
@@ -2219,7 +2219,7 @@ int density_subtract(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *
       "    options: \n"
       "              -union use union of input maps for operation\n"
       "              -nointerp do not use interpolation for operation\n"
-      "              -o <filename> write moved density to file.\n",
+      "              -o <filename> write density to file.\n",
       TCL_STATIC);
     return TCL_ERROR;
   }
@@ -2399,7 +2399,7 @@ int density_multiply(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *
       "    options: \n"
       "              -union use union of input maps for operation\n"
       "              -nointerp do not use interpolation for operation\n"
-      "              -o <filename> write moved density to file.\n",
+      "              -o <filename> write density to file.\n",
       TCL_STATIC);
     return TCL_ERROR;
   }
@@ -2579,7 +2579,7 @@ int density_average(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *i
       "    options: \n"
       "              -union use union of input maps for operation\n"
       "              -nointerp do not use interpolation for operation\n"
-      "              -o <filename> write moved density to file.\n",
+      "              -o <filename> write density to file.\n",
       TCL_STATIC);
     return TCL_ERROR;
   }
