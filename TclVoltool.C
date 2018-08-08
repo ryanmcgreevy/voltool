@@ -2029,7 +2029,7 @@ int density_binmask(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *i
 int density_add(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
   if (argc < 3) {
     Tcl_SetResult(interp, (char *) "usage: voltool "
-      "add <input map 1> <input map 2> [options]\n"
+      "add [options]\n"
       "    input options:  -i1 <input map> specifies new density filename to load.\n"
       "              -mol1 <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol1 <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
@@ -2209,7 +2209,7 @@ int density_add(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inter
 int density_subtract(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
   if (argc < 3) {
     Tcl_SetResult(interp, (char *) "usage: voltool "
-      "diff <input map 1> <input map 2> [options]\n"
+      "diff [options]\n"
       "    input options:  -i1 <input map> specifies new density filename to load.\n"
       "              -mol1 <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol1 <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
@@ -2389,7 +2389,7 @@ int density_subtract(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *
 int density_multiply(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
   if (argc < 3) {
     Tcl_SetResult(interp, (char *) "usage: voltool "
-      "mult <input map 1> <input map 2> [options]\n"
+      "mult [options]\n"
       "    input options:  -i1 <input map> specifies new density filename to load.\n"
       "              -mol1 <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol1 <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
@@ -2569,7 +2569,7 @@ int density_multiply(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *
 int density_average(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
   if (argc < 3) {
     Tcl_SetResult(interp, (char *) "usage: voltool "
-      "average <input map 1> <input map 2> [options]\n"
+      "average [options]\n"
       "    input options:  -i1 <input map> specifies new density filename to load.\n"
       "              -mol1 <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol1 <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
@@ -2749,7 +2749,7 @@ int density_average(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *i
 int density_correlate(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
   if (argc < 3) {
     Tcl_SetResult(interp, (char *) "usage: voltool "
-      "correlate <input map 1> <input map 2> \n"
+      "correlate [options] \n"
       "    input options:  -i1 <input map> specifies new density filename to load.\n"
       "              -mol1 <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol1 <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
