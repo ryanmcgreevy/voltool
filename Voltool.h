@@ -1,7 +1,14 @@
 #include <stdio.h>
 #include "VolumetricData.h"
+#include <stdint.h>
 #define MIN(X,Y) (((X)<(Y))? (X) : (Y))
 #define MAX(X,Y) (((X)>(Y))? (X) : (Y))
+
+static inline int myisnan(float f)
+{
+      union { float f; uint32_t x; } u = { f };
+          return (u.x << 1) > 0xff000000u;
+}
 
 // Cubic interpolation used by supersample
 inline float cubic_interp(float y0, float y1, float y2, float y3, float mu) {

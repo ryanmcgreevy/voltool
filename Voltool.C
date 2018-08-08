@@ -775,11 +775,11 @@ void add(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvol, bo
     voxel_coord(i, x, y, z, newvol);
 
     if (interp) newvol->data[i] = \
-      mapA->voxel_value_interpolate_from_coord(x,y,z) + \
-      mapB->voxel_value_interpolate_from_coord(x,y,z);
+      mapA->voxel_value_interpolate_from_coord_safe(x,y,z) + \
+      mapB->voxel_value_interpolate_from_coord_safe(x,y,z);
     else newvol->data[i] = \
-      mapA->voxel_value_from_coord(x,y,z) + \
-      mapB->voxel_value_from_coord(x,y,z);
+      mapA->voxel_value_from_coord_safe(x,y,z) + \
+      mapB->voxel_value_from_coord_safe(x,y,z);
   } 
 
 }
@@ -802,11 +802,11 @@ void subtract(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvo
     voxel_coord(i, x, y, z, newvol);
 
     if (interp) newvol->data[i] = \
-      mapA->voxel_value_interpolate_from_coord(x,y,z) - \
-      mapB->voxel_value_interpolate_from_coord(x,y,z);
+      mapA->voxel_value_interpolate_from_coord_safe(x,y,z) - \
+      mapB->voxel_value_interpolate_from_coord_safe(x,y,z);
     else newvol->data[i] = \
-      mapA->voxel_value_from_coord(x,y,z) - \
-      mapB->voxel_value_from_coord(x,y,z);
+      mapA->voxel_value_from_coord_safe(x,y,z) - \
+      mapB->voxel_value_from_coord_safe(x,y,z);
   } 
 
 }
@@ -820,22 +820,44 @@ void multiply(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvo
   if ( USE_UNION) {
     // UNION VERSION
     init_from_union(mapA, mapB, newvol);
+    for (int i=0; i<newvol->xsize*newvol->ysize*newvol->zsize; i++){
+      float x, y, z;
+      float voxelA, voxelB;
+      voxel_coord(i, x, y, z, newvol);
+      if (interp) {
+        voxelA = mapA->voxel_value_interpolate_from_coord(x,y,z);
+        voxelB = mapB->voxel_value_interpolate_from_coord(x,y,z);
+      } else {
+        voxelA = mapA->voxel_value_from_coord(x,y,z);
+        voxelB = mapB->voxel_value_from_coord(x,y,z);
+      }
+
+     if (!myisnan(voxelA) && !myisnan(voxelB))
+       newvol->data[i] = voxelA * voxelB;
+     else if (!myisnan(voxelA) && myisnan(voxelB))
+       newvol->data[i] = voxelA;
+     else if (myisnan(voxelA) && !myisnan(voxelB))
+       newvol->data[i] = voxelB;
+     else
+       newvol->data[i] = 0.;
+    }
   } else {
     // INTERSECTION VERSION
     init_from_intersection(mapA, mapB, newvol);
+    
+    for (int i=0; i<newvol->xsize*newvol->ysize*newvol->zsize; i++){
+      float x, y, z;
+      voxel_coord(i, x, y, z, newvol);
+
+      if (interp) newvol->data[i] = \
+        mapA->voxel_value_interpolate_from_coord(x,y,z) * \
+        mapB->voxel_value_interpolate_from_coord(x,y,z);
+      else newvol->data[i] = \
+        mapA->voxel_value_from_coord(x,y,z) * \
+        mapB->voxel_value_from_coord(x,y,z);
+    } 
+
   }
-  for (int i=0; i<newvol->xsize*newvol->ysize*newvol->zsize; i++){
-    float x, y, z;
-    voxel_coord(i, x, y, z, newvol);
-
-    if (interp) newvol->data[i] = \
-      mapA->voxel_value_interpolate_from_coord(x,y,z) * \
-      mapB->voxel_value_interpolate_from_coord(x,y,z);
-    else newvol->data[i] = \
-      mapA->voxel_value_from_coord(x,y,z) * \
-      mapB->voxel_value_from_coord(x,y,z);
-  } 
-
 }
 
 void average(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvol, bool interp, bool USE_UNION) {
@@ -856,11 +878,11 @@ void average(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvol
     voxel_coord(i, x, y, z, newvol);
 
     if (interp) newvol->data[i] = \
-      (mapA->voxel_value_interpolate_from_coord(x,y,z) + \
-      mapB->voxel_value_interpolate_from_coord(x,y,z))/2;
+      (mapA->voxel_value_interpolate_from_coord_safe(x,y,z) + \
+      mapB->voxel_value_interpolate_from_coord_safe(x,y,z))/2;
     else newvol->data[i] = \
-      (mapA->voxel_value_from_coord(x,y,z) + \
-      mapB->voxel_value_from_coord(x,y,z))/2;
+      (mapA->voxel_value_from_coord_safe(x,y,z) + \
+      mapB->voxel_value_from_coord_safe(x,y,z))/2;
   } 
 
 }

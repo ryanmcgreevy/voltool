@@ -36,14 +36,14 @@
 #include "MDFF.h"
 #include "Voltool.h"
 #include <stdio.h>
-#include <stdint.h>
-
+//#include <stdint.h>
+/*
 static inline int myisnan(float f)
 {
       union { float f; uint32_t x; } u = { f };
           return (u.x << 1) > 0xff000000u;
 }
-
+*/
 typedef struct{
   double mapA_sum;
   double mapB_sum;
