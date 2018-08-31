@@ -36,14 +36,6 @@
 #include "MDFF.h"
 #include "Voltool.h"
 #include <stdio.h>
-//#include <stdint.h>
-/*
-static inline int myisnan(float f)
-{
-      union { float f; uint32_t x; } u = { f };
-          return (u.x << 1) > 0xff000000u;
-}
-*/
 typedef struct{
   double mapA_sum;
   double mapB_sum;
@@ -64,18 +56,6 @@ static void * correlationthread(void *voidparms) {
   wkf_tasktile_t tile;
   ccparms *parms = NULL;
   wkf_threadlaunch_getdata(voidparms, (void **) &parms);
-/*
-  int gx,gy,gz;
-  float ix,iy,iz;
-
-  double origin[3] = {0.0, 0.0, 0.0};
-  origin[0] = parms->newvol->origin[0];
-  origin[1] = parms->newvol->origin[1];
-  origin[2] = parms->newvol->origin[2];
-  double xdelta[3] = {(parms->newvol->xaxis[0] / (parms->newvol->xsize - 1)), (parms->newvol->xaxis[1] / (parms->newvol->xsize - 1)), (parms->newvol->xaxis[2] / (parms->newvol->xsize - 1))};
-  double ydelta[3] = {(parms->newvol->yaxis[0] / (parms->newvol->ysize - 1)), (parms->newvol->yaxis[1] / (parms->newvol->ysize - 1)), (parms->newvol->yaxis[2] / (parms->newvol->ysize - 1))};
-  double zdelta[3] = {(parms->newvol->zaxis[0] / (parms->newvol->zsize - 1)), (parms->newvol->zaxis[1] / (parms->newvol->zsize - 1)), (parms->newvol->zaxis[2] / (parms->newvol->zsize - 1))};
-*/
   double lmapA_sum = 0.0f;
   double lmapB_sum = 0.0f;
   double lmapA_ss = 0.0f;
@@ -85,37 +65,12 @@ static void * correlationthread(void *voidparms) {
   while (wkf_threadlaunch_next_tile(voidparms, 16384, &tile) != WKF_SCHED_DONE) { 
     int x;
     for (x=tile.start; x<tile.end; x++) {
-/*
-      int xsize = parms->newvol->xsize;
-      int ysize = parms->newvol->ysize;
-       
-      gz = x / (ysize*xsize);
-      gy = (x % (ysize*xsize)) / xsize;
-      gx = x % xsize;
-#if 0
-      parms->qsVol->voxel_coord(gx,gy,gz,ix,iy,iz);
-#else
-      ix = origin[0] + (gx * xdelta[0]) + (gy * xdelta[1]) + (gz * xdelta[2]);
-      iy = origin[1] + (gx * ydelta[0]) + (gy * ydelta[1]) + (gz * ydelta[2]);
-      iz = origin[2] + (gx * zdelta[0]) + (gy * zdelta[1]) + (gz * zdelta[2]);
-#endif
-*/
       float ix,iy,iz;
       voxel_coord(x, ix, iy, iz, parms->newvol);     
       float voxelA = parms->qsVol->voxel_value_interpolate_from_coord(ix,iy,iz);
       float voxelB = parms->targetVol->voxel_value_interpolate_from_coord(ix,iy,iz);
-//      float voxelB = parms->targetVol->voxel_value_from_coord(ix,iy,iz);
       // checks for nans (nans always false when self compared)
       if (!myisnan(voxelB) && !myisnan(voxelA)) {
-// XXX what's up with this test vs. NULL?:
-//          if(parms->threshold == NULL){ 
-//          if (parms->threshold == 0.0){ 
-//            lmapA_sum += voxelA;
-//            lmapB_sum += voxelB;
-//            lmapA_ss += voxelA*voxelA;
-//            lmapB_ss += voxelB*voxelB;
-//            lcc += voxelA*voxelB;
-//            lsize++;
             // Should be voxel B? thresholding simulated aren't we?
             // Thats why the old style NaN check is there.
 //      } else if(voxelB >= parms->threshold) { 
@@ -163,60 +118,6 @@ int cc_threaded(VolumetricData *qsVol, const VolumetricData *targetVol, double *
   int physprocs = wkf_thread_numprocessors();
   int maxprocs = physprocs;
  
-/*
-  float *voltexmap = NULL;
-  // We can productively use only a few cores per socket due to the
-  // limited memory bandwidth per socket. Also, hyperthreading
-  // actually hurts performance.  These two considerations combined
-  // with the linear increase in memory use prevent us from using large
-  // numbers of cores with this simple approach, so if we've got more 
-  // than 8 CPU cores, we'll iteratively cutting the core count in 
-  // half until we're under 8 cores.
-  while (maxprocs > 8) 
-    maxprocs /= 2;
-
-  // Limit the number of CPU cores used so we don't run the 
-  // machine out of memory during surface computation.
-  // Use either a dynamic or hard-coded heuristic to limit the
-  // number of CPU threads we will spawn so that we don't run
-  // the machine out of memory.  
-  long volsz = numvoxels[0] * numvoxels[1] * numvoxels[2];
-  long volmemsz = sizeof(float) * volsz;
-  long volmemszkb = volmemsz / 1024;
-  long volmemtexszkb = volmemszkb + ((voltexmap != NULL) ? 3*volmemszkb : 0);
-
-  // Platforms that don't have a means of determining available
-  // physical memory will return -1, in which case we fall back to the
-  // simple hard-coded 2GB-max-per-core heuristic.
-  long vmdcorefree = -1;
-
-#if defined(ARCH_BLUEWATERS) || defined(ARCH_CRAY_XC) || defined(ARCH_CRAY_XK) || defined(ARCH_LINUXAMD64) || defined(ARCH_SOLARIS2_64) || defined(ARCH_SOLARISX86_64) || defined(ARCH_AIX6_64) || defined(ARCH_MACOSXX86_64) 
-  // XXX The core-free query scheme has one weakness in that we might have a 
-  // 32-bit version of VMD running on a 64-bit machine, where the available
-  // physical memory may be much larger than is possible for a 
-  // 32-bit VMD process to address.  To do this properly we must therefore
-  // use conditional compilation safety checks here until we  have a better
-  // way of determining this with a standardized helper routine.
-  vmdcorefree = vmd_get_avail_physmem_mb();
-#endif
-
-  if (vmdcorefree >= 0) {
-    // Make sure QuickSurf uses no more than a fraction of the free memory
-    // as an upper bound alternative to the hard-coded heuristic.
-    // This should be highly preferable to the fixed-size heuristic
-    // we had used in all cases previously.
-    while ((volmemtexszkb * maxprocs) > (1024*vmdcorefree/4)) {
-      maxprocs /= 2;
-    }
-  } else {
-    // Set a practical per-core maximum memory use limit to 2GB, for all cores
-    while ((volmemtexszkb * maxprocs) > (2 * 1024 * 1024))
-      maxprocs /= 2;
-  }
-
-  if (maxprocs < 1) 
-    maxprocs = 1;
-*/
 
   //get intersection map so we look at all the overlapping voxels
   double origin[3] = {0., 0., 0.};
