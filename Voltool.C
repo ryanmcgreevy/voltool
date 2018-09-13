@@ -1,3 +1,24 @@
+/***************************************************************************
+ *cr
+ *cr            (C) Copyright 2007-2011 The Board of Trustees of the
+ *cr                        University of Illinois
+ *cr                         All Rights Reserved
+ *cr
+ ***************************************************************************/
+
+/***************************************************************************
+ * RCS INFORMATION:
+ *
+ *      $RCSfile: Voltool.C,v $
+ *      $Author: johns $        $Locker:  $             $State: Exp $
+ *      $Revision: 1.1 $      $Date: 2018/09/12 14:06:40 $
+ *
+ ***************************************************************************
+ * DESCRIPTION:
+ *  General volumetric data processing routines, particularly supporting MDFF 
+ *
+ ***************************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

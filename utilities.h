@@ -11,7 +11,7 @@
  *
  *	$RCSfile: utilities.h,v $
  *	$Author: johns $	$Locker:  $		$State: Exp $
- *	$Revision: 1.108 $	$Date: 2018/03/06 22:26:23 $
+ *	$Revision: 1.109 $	$Date: 2018/09/07 19:01:58 $
  *
  ***************************************************************************
  * DESCRIPTION:
