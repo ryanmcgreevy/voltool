@@ -605,7 +605,7 @@ void VolumetricData::crop(double crop_minx, double crop_miny, double crop_minz, 
 
 void VolumetricData::clamp(float min_value, float max_value) {
   
-  for (long i=0; i<xsize*ysize*zsize; i++) {
+  for (long i=0; i<gridsize(); i++) {
     if (data[i] < min_value) data[i] = min_value;
     else if (data[i] > max_value) data[i] = max_value;
   }
@@ -627,7 +627,7 @@ void VolumetricData::scalar_add(float ff) {
 
 }
 
-void VolumetricData::fit_to_range(float min_value, float max_value) {
+void VolumetricData::rescale_voxel_value_range(float min_value, float max_value) {
 
   for (long i=0; i<gridsize(); i++)
     data[i] = min_value + (max_value - min_value)*(data[i] - datamin)/(datamax - datamin);

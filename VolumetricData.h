@@ -176,8 +176,8 @@ public:
   /// add scalar value to to all voxels
   void scalar_add(float ff);
 
-  /// fit voxel data to a given range
-  void fit_to_range(float min_value, float max_value);
+  /// rescale voxel data to a given range
+  void rescale_voxel_value_range(float min_value, float max_value);
 
   /// decimate/dowmnsample voxels by 2 in each dimension (x8 total reduction)
   void downsample();

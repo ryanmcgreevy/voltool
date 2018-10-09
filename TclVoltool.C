@@ -1657,7 +1657,7 @@ int density_range(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *int
     Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
     return TCL_ERROR;
   }
-  volmapA->fit_to_range(minmax[0], minmax[1]); 
+  volmapA->rescale_voxel_value_range(minmax[0], minmax[1]); 
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
   if (outputmap != NULL) {
