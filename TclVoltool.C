@@ -988,7 +988,7 @@ int density_trim(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inte
     Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
     return TCL_ERROR;
   }
-  pad(volmapA, -trim[0], -trim[1], -trim[2], -trim[3], -trim[4], -trim[5]); 
+  volmapA->pad(-trim[0], -trim[1], -trim[2], -trim[3], -trim[4], -trim[5]); 
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
   if (outputmap != NULL) {
@@ -1106,7 +1106,7 @@ int density_crop(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inte
     Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
     return TCL_ERROR;
   }
-  crop(volmapA, minmax[0], minmax[1], minmax[2], minmax[3], minmax[4], minmax[5]); 
+  volmapA->crop(minmax[0], minmax[1], minmax[2], minmax[3], minmax[4], minmax[5]); 
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
   if (outputmap != NULL) {
@@ -1224,7 +1224,7 @@ int density_clamp(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *int
     Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
     return TCL_ERROR;
   }
-  clamp(volmapA, min, max); 
+  volmapA->clamp(min, max); 
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
   if (outputmap != NULL) {
@@ -1329,7 +1329,7 @@ int density_smult(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *int
     Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
     return TCL_ERROR;
   }
-  scale_by(volmapA, (float)amt); 
+  volmapA->scale_by((float)amt); 
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
   if (outputmap != NULL) {
@@ -1434,7 +1434,7 @@ int density_smooth(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *in
     Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
     return TCL_ERROR;
   }
-  gauss1d(volmapA, sigma); 
+  volmapA->gauss1d(sigma); 
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
   if (outputmap != NULL) {
@@ -1539,7 +1539,7 @@ int density_sadd(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inte
     Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
     return TCL_ERROR;
   }
-  scalar_add(volmapA, (float)amt); 
+  volmapA->scalar_add((float)amt); 
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
   if (outputmap != NULL) {
@@ -1657,7 +1657,7 @@ int density_range(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *int
     Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
     return TCL_ERROR;
   }
-  fit_to_range(volmapA, minmax[0], minmax[1]); 
+  volmapA->fit_to_range(minmax[0], minmax[1]); 
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
   if (outputmap != NULL) {
@@ -1752,7 +1752,7 @@ int density_downsample(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp
     return TCL_ERROR;
   }
 
-  downsample(volmapA); 
+  volmapA->downsample(); 
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
   if (outputmap != NULL) {
@@ -1847,7 +1847,7 @@ int density_supersample(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Inter
     return TCL_ERROR;
   }
 
-  supersample(volmapA); 
+  volmapA->supersample(); 
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
   if (outputmap != NULL) {
@@ -1942,7 +1942,7 @@ int density_sigma(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *int
     return TCL_ERROR;
   }
 
-  sigma_scale(volmapA); 
+  volmapA->sigma_scale(); 
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
   if (outputmap != NULL) {
@@ -2037,7 +2037,7 @@ int density_binmask(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *i
     return TCL_ERROR;
   }
 
-  binmask(volmapA); 
+  volmapA->binmask(); 
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
   if (outputmap != NULL) {
