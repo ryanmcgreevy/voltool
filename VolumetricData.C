@@ -590,8 +590,7 @@ void VolumetricData::crop(double crop_minx, double crop_miny, double crop_minz, 
   double ydelta[3] = {(yaxis[0] / (ysize - 1)) , (yaxis[1] / (ysize - 1)) , (yaxis[2] / (ysize - 1))};
   double zdelta[3] = {(zaxis[0] / (zsize - 1)) , (zaxis[1] / (zsize - 1)) , (zaxis[2] / (zsize - 1))};
 
-  // Right now, only works for orthogonal cells. look at cc_threaded in MDFF.C for example of calculating
-  //correct delta for non-ortho
+  // Right now, only works for orthogonal cells.
   int padxm = int((origin[0] - crop_minx)/xdelta[0]);
   int padym = int((origin[1] - crop_miny)/ydelta[1]);
   int padzm = int((origin[2] - crop_minz)/zdelta[2]);
@@ -606,7 +605,7 @@ void VolumetricData::crop(double crop_minx, double crop_miny, double crop_minz, 
 
 void VolumetricData::clamp(float min_value, float max_value) {
   
-  for (int i=0; i<xsize*ysize*zsize; i++) {
+  for (long i=0; i<xsize*ysize*zsize; i++) {
     if (data[i] < min_value) data[i] = min_value;
     else if (data[i] > max_value) data[i] = max_value;
   }
@@ -616,30 +615,22 @@ void VolumetricData::clamp(float min_value, float max_value) {
 
 void VolumetricData::scale_by(float ff) {
 
-  for (int i=0; i<xsize*ysize*zsize; i++)
+  for (long i=0; i<gridsize(); i++)
     data[i] *= ff;
 
 }
 
 void VolumetricData::scalar_add(float ff) {
 
-  for (int i=0; i<xsize*ysize*zsize; i++)
+  for (long i=0; i<gridsize(); i++)
     data[i] += ff;
 
 }
 
 void VolumetricData::fit_to_range(float min_value, float max_value) {
 
-  float min = data[0];
-  float max = data[0];
-  int i;
-  for (i=1; i<xsize*ysize*zsize; i++) {
-    if (data[i] < min) min = data[i];
-    if (data[i] > max) max = data[i];
-  }
-  
-  for (i=0; i<xsize*ysize*zsize; i++)
-    data[i] = min_value + (max_value - min_value)*(data[i] - min)/(max - min);
+  for (long i=0; i<gridsize(); i++)
+    data[i] = min_value + (max_value - min_value)*(data[i] - datamin)/(datamax - datamin);
 
 }
 
