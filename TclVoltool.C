@@ -883,7 +883,7 @@ int fit(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
 int density_trim(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
   if (argc < 3) {
     Tcl_SetResult(interp, (char *) "usage: voltool "
-      "trim -amt <x1, x2, y1, y2, z1, z2> amount to trim from each end in x, y, z axes> [options]\n"
+      "trim -amt {x1 x2 y1 y2 z1 z2} amount to trim from each end in x, y, z axes> [options]\n"
       "    options:  -i <input map> specifies new density filename to load.\n"
       "              -mol <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
@@ -1001,7 +1001,7 @@ int density_trim(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inte
 int density_crop(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
   if (argc < 3) {
     Tcl_SetResult(interp, (char *) "usage: voltool "
-      "crop -amt <minx, miny, minz, maxx, maxy, maxz> minmax values given in coordinate space.> [options]\n"
+      "crop -amt {minx miny minz maxx maxy maxz} minmax values given in coordinate space.> [options]\n"
       "    options:  -i <input map> specifies new density filename to load.\n"
       "              -mol <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
@@ -1552,7 +1552,7 @@ int density_sadd(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inte
 int density_range(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
   if (argc < 3) {
     Tcl_SetResult(interp, (char *) "usage: voltool "
-      "range -minmax <min, max> minmax voxel values> [options]\n"
+      "range -minmax {min max} minmax voxel values> [options]\n"
       "    options:  -i <input map> specifies new density filename to load.\n"
       "              -mol <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
