@@ -191,13 +191,9 @@ public:
 
   /// Make a binary mask out of a map, i.e. all values > 0 are set to 1
   void binmask();
-
-  /// Gaussian blurring (as a 3D convolution)
-  void gauss3d(double sigma);
-
-  /// Fast Gaussian blur that takes advantage of the fact that the 
-  /// dimensions are separable.
-  void gauss1d(double sigma);
+  
+  ///Guassian Blur using algorithm from Segmentation
+  void gaussian_blur(double sigma);
 };
 
 

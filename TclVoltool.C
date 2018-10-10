@@ -1434,7 +1434,7 @@ int density_smooth(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *in
     Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
     return TCL_ERROR;
   }
-  volmapA->gauss1d(sigma); 
+  volmapA->gaussian_blur(sigma);
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
   if (outputmap != NULL) {

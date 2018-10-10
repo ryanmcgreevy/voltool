@@ -27,6 +27,7 @@
 #include "VolumetricData.h"
 #include "Matrix4.h"
 #include "utilities.h"
+#include "Segmentation.h"
 #include <float.h> // FLT_MAX etc
   
 #ifndef NAN //not a number
@@ -545,9 +546,8 @@ void VolumetricData::pad(int padxm, int padxp, int padym, int padyp, int padzm, 
   int ysize_new = MAX(1, ysize + padym + padyp);
   int zsize_new = MAX(1, zsize + padzm + padzp);
   
-  int gridsize = xsize_new*ysize_new*zsize_new;
-  float *data_new = new float[gridsize];
-  memset(data_new, 0, gridsize*sizeof(float));
+  float *data_new = new float[gridsize()];
+  memset(data_new, 0, gridsize()*sizeof(float));
 
   int startx = MAX(0, padxm);
   int starty = MAX(0, padym);
@@ -577,7 +577,8 @@ void VolumetricData::pad(int padxm, int padxp, int padym, int padyp, int padzm, 
   vec_scaled_add(origin, -padxm, xdelta);
   vec_scaled_add(origin, -padym, ydelta);
   vec_scaled_add(origin, -padzm, zdelta);
-
+  
+  minmax_1fv_aligned(data, gridsize(), &datamin, &datamax);
 
 }
 
@@ -615,23 +616,24 @@ void VolumetricData::clamp(float min_value, float max_value) {
 
 void VolumetricData::scale_by(float ff) {
 
-  for (long i=0; i<gridsize(); i++)
-    data[i] *= ff;
+  for (long i=0; i<gridsize(); i++) data[i] *= ff;
+  minmax_1fv_aligned(data, gridsize(), &datamin, &datamax);
 
 }
 
 void VolumetricData::scalar_add(float ff) {
 
-  for (long i=0; i<gridsize(); i++)
-    data[i] += ff;
+  for (long i=0; i<gridsize(); i++) data[i] += ff;
 
 }
 
 void VolumetricData::rescale_voxel_value_range(float min_value, float max_value) {
 
-  for (long i=0; i<gridsize(); i++)
+  for (long i=0; i<gridsize(); i++) {
     data[i] = min_value + (max_value - min_value)*(data[i] - datamin)/(datamax - datamin);
+  }
 
+  minmax_1fv_aligned(data, gridsize(), &datamin, &datamax);
 }
 
 // Downsample grid size by factor of 2
@@ -674,6 +676,7 @@ void VolumetricData::downsample() {
       
   delete[] data;
   data = data_new;
+  minmax_1fv_aligned(data, gridsize(), &datamin, &datamax);
 }
 
 // Supersample grid size by factor of 2
@@ -793,6 +796,7 @@ void VolumetricData::supersample() {
 
   delete[] data;
   data = data_new;
+  minmax_1fv_aligned(data, gridsize(), &datamin, &datamax);
 }
 
 // Transform map to a sigma scale, so that isovalues in VMD correspond
@@ -816,6 +820,7 @@ void VolumetricData::sigma_scale() {
     data[i] -= mean;
     data[i] /= sigma;
   }
+  minmax_1fv_aligned(data, gridsize(), &datamin, &datamax);
 
 }
 
@@ -827,172 +832,21 @@ void VolumetricData::binmask() {
   for (i=0; i<xsize*ysize*zsize; i++) {
     if (data[i] > 0) data[i] = 1;
   }
+  minmax_1fv_aligned(data, gridsize(), &datamin, &datamax);
 }
 
-//Gaussian blurring (as a 3D convolution), but the kernel can easily be changed to something else
-void VolumetricData::gauss3d(double sigma) {
-
-  //Right now, only works if resolution is the same in all map dimensions
-  double xdelta[3] = {(xaxis[0] / (xsize - 1)) , (xaxis[1] / (xsize - 1)) , (xaxis[2] / (xsize - 1))};
-
-  // Pre-divide by sqrt(3) in x/y/z dimensions to get "sigma" in 3D
-  sigma /= sqrt(3.);
-  
-  double delta = xdelta[0];
-  int step = (int)(3.*sigma/delta); // size of gaussian convolution
-  if (!step) return;
-  
-  // Build convolution kernel
-  int convsize = 2*step+1;
-  float *conv = new float[convsize*convsize*convsize];
-  memset(conv, 0, convsize*convsize*convsize*sizeof(float));
-
-/*
-  // Pad the map if required
-  if (flagsbits & USE_PADDING)
-    pad(vol, convsize, convsize, convsize, convsize, convsize, convsize);
+void VolumetricData::gaussian_blur(double sigma) {
+/*#if defined(VMDCUDA)
+  bool cuda = true;
+#else 
+  bool cuda = false;
+#endif
 */
-
-  int gridsize = xsize*ysize*zsize;
-  float *data_new = new float[gridsize];
-  memset(data_new, 0, gridsize*sizeof(float));
-  
-  double r2, norm=0.;
-  int cx, cy, cz; 
-  for (cz=0; cz<convsize; cz++)
-  for (cy=0; cy<convsize; cy++)
-  for (cx=0; cx<convsize; cx++) {
-    r2 = delta*delta*((cx-step)*(cx-step)+(cy-step)*(cy-step)+(cz-step)*(cz-step));
-    conv[cx + cy*convsize + cz*convsize*convsize] = exp(-0.5*r2/(sigma*sigma)); 
-    norm += conv[cx + cy*convsize + cz*convsize*convsize];
-  }
-  
-  // Normalize...
-  int n;
-  for (n=0; n<convsize*convsize*convsize; n++) {
-    conv[n] = conv[n]/norm;
-  }
- 
-  // Apply convolution   
-//  if (!ops->trivial())
-  //  for (n=0; n<gridsize; n++) data[n] = ops->ConvertValue(data[n]);  
-  
-  int gx, gy, gz, hx, hy, hz; 
-  for (gz=0; gz<zsize; gz++)
-  for (gy=0; gy<ysize; gy++) 
-  for (gx=0; gx<xsize; gx++)
-  for (cz=0; cz<convsize; cz++)
-  for (cy=0; cy<convsize; cy++)
-  for (cx=0; cx<convsize; cx++) {
-    hx=gx+cx-step;
-    hy=gy+cy-step;
-    hz=gz+cz-step;
-    if (hx < 0 || hx >= xsize || hy < 0 || hy >= ysize || hz < 0 || hz >= zsize) {
-      continue;
-    }
-
-    data_new[gx + gy*xsize + gz*xsize*ysize] += data[hx + hy*xsize + hz*xsize*ysize]*conv[cx + cy*convsize + cz*convsize*convsize];  
-  }
-  
-  //if (!ops->trivial())
-  //  for (n=0; n<gridsize; n++) data_new[n] = ops->ConvertAverage(data_new[n]);  
+  bool cuda = false;
+  GaussianBlur<float>* gaussian_f = new GaussianBlur<float>(data, xsize, ysize, zsize, cuda);
+  gaussian_f->blur(sigma);
   
   delete[] data;
-  data = data_new;
-}
-
-// Fast Gaussian blur that takes advantage of the fact that the dimensions are separable.
-void VolumetricData::gauss1d(double sigma) {
-  //Right now, only works if resolution is the same in all map dimensions
-  double xdelta[3] = {(xaxis[0] / (xsize - 1)) , (xaxis[1] / (xsize - 1)) , (xaxis[2] / (xsize - 1))};
-  
-  // Pre-divide by sqrt(3) in x/y/z dimensions to get "sigma" in 3D
-  sigma /= sqrt(3.);
-  
-  double delta = xdelta[0];
-  int step = (int)(3.*sigma/delta); // size of gaussian convolution
-  if (!step) return;
-
-  // Build convolution kernel
-  int convsize = 2*step+1;
-  float *conv = new float[convsize];
-  memset(conv, 0, convsize*sizeof(float));
-/*
-  // Pad the map if required
-  if (flagsbits & USE_PADDING)
-    pad(convsize, convsize, convsize, convsize, convsize, convsize);
-*/
-  int gridsize = xsize*ysize*zsize;
-  float *data_new = new float[gridsize];
-
-  double r2, norm=0.;
-  int c;
-  for (c=0; c<convsize; c++) {
-    r2 = delta*delta*(c-step)*(c-step);
-    conv[c] = (float) exp(-0.5*r2/(sigma*sigma)); 
-    norm += conv[c];
-  }
-  
-  // Normalize...
-
-  for (c=0; c<convsize; c++) {
-    conv[c] = conv[c]/norm;
-  }
-/* 
-  // Apply convolution   
-  int n;
-  if (!ops->trivial())
-    for (n=0; n<gridsize; n++) data[n] = ops->ConvertValue(data[n]);  
-*/
-  memset(data_new, 0, gridsize*sizeof(float));
-  
-  int gx, gy, gz, hx, hy, hz; 
-  for (gz=0; gz<zsize; gz++)
-  for (gy=0; gy<ysize; gy++)
-  for (gx=0; gx<xsize; gx++)
-  for (c=0; c<convsize; c++) {
-    hx=gx+c-step;
-    hy=gy;
-    hz=gz;
-    if (hx < 0 || hx >= xsize) continue;
-    data_new[gx + gy*xsize + gz*xsize*ysize] += data[hx + hy*xsize + hz*xsize*ysize]*conv[c];
-  }
-
-  float *dataswap = data;
-  data = data_new;
-  data_new = dataswap;
-  memset(data_new, 0, gridsize*sizeof(float));
-
-  for (gz=0; gz<zsize; gz++)
-  for (gy=0; gy<ysize; gy++)
-  for (gx=0; gx<xsize; gx++)
-  for (c=0; c<convsize; c++) {
-    hx=gx;
-    hy=gy+c-step;
-    hz=gz;
-    if (hy < 0 || hy >= ysize) continue;
-    data_new[gx + gy*xsize + gz*xsize*ysize] += data[hx + hy*xsize + hz*xsize*ysize]*conv[c];
-  }
-    
-  dataswap = data;
-  data = data_new;
-  data_new = dataswap;
-  memset(data_new, 0, gridsize*sizeof(float));
-  
-  for (gz=0; gz<zsize; gz++)
-  for (gy=0; gy<ysize; gy++)
-  for (gx=0; gx<xsize; gx++)
-  for (c=0; c<convsize; c++) {
-    hx=gx;
-    hy=gy;
-    hz=gz+c-step;
-    if (hz < 0 || hz >= zsize) continue;
-    data_new[gx + gy*xsize + gz*xsize*ysize] += data[hx + hy*xsize + hz*xsize*ysize]*conv[c];
-  }
-/*
-  if (!ops->trivial())
-    for (n=0; n<gridsize; n++) data_new[n] = ops->ConvertAverage(data_new[n]);
-  */
-  delete[] data;
-  data = data_new;
+  data = gaussian_f->get_image();
+  minmax_1fv_aligned(data, gridsize(), &datamin, &datamax);
 }
