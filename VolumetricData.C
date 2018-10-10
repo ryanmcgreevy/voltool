@@ -649,7 +649,7 @@ void VolumetricData::downsample() {
   int xsize_new = xsize/2;
   int ysize_new = ysize/2;
   int zsize_new = zsize/2;
-  float *data_new = new float[xsize_new*ysize_new*zsize_new];
+  float *data_new = new float[(long)xsize_new*(long)ysize_new*(long)zsize_new];
   
   int index_shift[8] = {0, 1, xsize, xsize+1, xsize*ysize, xsize*ysize + 1, xsize*ysize + xsize, xsize*ysize + xsize + 1};
   
@@ -692,7 +692,7 @@ void VolumetricData::supersample() {
   int zsize_new = zsize*2-1;
   int xysize = xsize*ysize;
   int xysize_new = xsize_new*ysize_new;
-  float *data_new = new float[xsize_new*ysize_new*zsize_new];
+  float *data_new = new float[(long)xsize_new*(long)ysize_new*(long)zsize_new];
   
   // Copy map to the finer grid
   for (gx=0; gx<xsize; gx++)
@@ -807,7 +807,7 @@ void VolumetricData::supersample() {
 // to number of sigmas above the mean
 void VolumetricData::sigma_scale() {
   
-  int size = xsize*ysize*zsize;
+  int size = gridsize();
   double mean = 0.;
   int i;
   for (i=0; i<size; i++)
@@ -833,7 +833,7 @@ void VolumetricData::sigma_scale() {
 void VolumetricData::binmask() {
   clamp(0., FLT_MAX);
   int i;
-  for (i=0; i<xsize*ysize*zsize; i++) {
+  for (i=0; i<gridsize(); i++) {
     if (data[i] > 0) data[i] = 1;
   }
   minmax_1fv_aligned(data, gridsize(), &datamin, &datamax);
