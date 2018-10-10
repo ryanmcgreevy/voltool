@@ -616,14 +616,19 @@ void VolumetricData::clamp(float min_value, float max_value) {
 
 void VolumetricData::scale_by(float ff) {
 
-  for (long i=0; i<gridsize(); i++) data[i] *= ff;
+  for (long i=0; i<gridsize(); i++) {
+    data[i] *= ff; 
+  }
   minmax_1fv_aligned(data, gridsize(), &datamin, &datamax);
 
 }
 
 void VolumetricData::scalar_add(float ff) {
 
-  for (long i=0; i<gridsize(); i++) data[i] += ff;
+  for (long i=0; i<gridsize(); i++){
+    data[i] += ff;
+  }
+  minmax_1fv_aligned(data, gridsize(), &datamin, &datamax);
 
 }
 
@@ -632,7 +637,6 @@ void VolumetricData::rescale_voxel_value_range(float min_value, float max_value)
   for (long i=0; i<gridsize(); i++) {
     data[i] = min_value + (max_value - min_value)*(data[i] - datamin)/(datamax - datamin);
   }
-
   minmax_1fv_aligned(data, gridsize(), &datamin, &datamax);
 }
 
