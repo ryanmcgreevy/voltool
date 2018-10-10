@@ -11,7 +11,7 @@
  *
  *	$RCSfile: VolumetricData.C,v $
  *	$Author: johns $	$Locker:  $		$State: Exp $
- *	$Revision: 1.41 $	$Date: 2018/09/07 19:13:45 $
+ *	$Revision: 1.43 $	$Date: 2018/10/10 18:19:33 $
  *
  ***************************************************************************
  * DESCRIPTION:
@@ -33,6 +33,9 @@
 #ifndef NAN //not a number
   const float NAN = sqrtf(-1.f); //need some kind of portable NAN definition
 #endif
+
+#define MIN(X,Y) (((X)<(Y))? (X) : (Y))
+#define MAX(X,Y) (((X)>(Y))? (X) : (Y))
 
 /// constructor for single precision origin/axes info
 VolumetricData::VolumetricData(const char *dataname, const float *o, 
@@ -533,14 +536,16 @@ void VolumetricData::voxel_gradient_interpolate_from_coord(const float *coord, f
   voxel_gradient_interpolate(voxcoord, grad);
 }
 
-// Pad each side of the volmap's grid with zeros. Negative padding results
-// in a trimming of the map
+
+// Pad each side of the volmap's grid with zeros. 
+// Negative padding results in cropping/trimming of the map
+//
+// XXX needs to be fixed+tested for multi-billion voxel maps
+//
 void VolumetricData::pad(int padxm, int padxp, int padym, int padyp, int padzm, int padzp) {
-  
-  double xdelta[3] = {(xaxis[0] / (xsize - 1)) , (xaxis[1] / (xsize - 1)) , (xaxis[2] / (xsize - 1))};
-  double ydelta[3] = {(yaxis[0] / (ysize - 1)) , (yaxis[1] / (ysize - 1)) , (yaxis[2] / (ysize - 1))};
-  double zdelta[3] = {(zaxis[0] / (zsize - 1)) , (zaxis[1] / (zsize - 1)) , (zaxis[2] / (zsize - 1))};
- 
+  double xdelta[3] = {(xaxis[0] / (xsize - 1)), (xaxis[1] / (xsize - 1)), (xaxis[2] / (xsize - 1))};
+  double ydelta[3] = {(yaxis[0] / (ysize - 1)), (yaxis[1] / (ysize - 1)), (yaxis[2] / (ysize - 1))};
+  double zdelta[3] = {(zaxis[0] / (zsize - 1)), (zaxis[1] / (zsize - 1)), (zaxis[2] / (zsize - 1))};
 
   int xsize_new = MAX(1, xsize + padxm + padxp);
   int ysize_new = MAX(1, ysize + padym + padyp);
@@ -562,13 +567,12 @@ void VolumetricData::pad(int padxm, int padxp, int padym, int padyp, int padzm, 
   for (gz=startz; gz<endz; gz++)
     data_new[gx + gy*xsize_new + gz*xsize_new*ysize_new] = data[(gx-padxm) + (gy-padym)*xsize + (gz-padzm)*xsize*ysize];
 
-  delete data;
-  data = data_new;
+  delete data;         ///< free the original map
+  data = data_new;     ///< replace the original map with the new one
 
   xsize = xsize_new;
   ysize = ysize_new;
   zsize = zsize_new;
-  
 
   vec_scaled_add(xaxis, padxm+padxp, xdelta);
   vec_scaled_add(yaxis, padym+padyp, ydelta);
@@ -577,16 +581,27 @@ void VolumetricData::pad(int padxm, int padxp, int padym, int padyp, int padzm, 
   vec_scaled_add(origin, -padxm, xdelta);
   vec_scaled_add(origin, -padym, ydelta);
   vec_scaled_add(origin, -padzm, zdelta);
-  
-  minmax_1fv_aligned(data, gridsize(), &datamin, &datamax);
 
+  // Since an arbitrary part of the original map may have been
+  // cropped out, we have to recompute the datamin/datamax values
+  // from scratch.
+  //
+  // If we know that the map was only padded and not cropped,
+  // we could avoid this and instead just update datamin/datamax
+  // for the new zero-valued voxels that have been added to the edges.
+  //
+  // use fast 16-byte-aligned min/max routine
+  minmax_1fv_aligned(data, gridsize(), &datamin, &datamax);
 }
+
 
 // Crop the map based on minmax values given in coordinate space. If
 // the 'cropping box' exceeds the map boundaries, the map is padded
 // with zeroes. 
+//
+// XXX needs to be fixed+tested for multi-billion voxel maps
+//
 void VolumetricData::crop(double crop_minx, double crop_miny, double crop_minz, double crop_maxx, double crop_maxy, double crop_maxz) {
-
   double xdelta[3] = {(xaxis[0] / (xsize - 1)) , (xaxis[1] / (xsize - 1)) , (xaxis[2] / (xsize - 1))};
   double ydelta[3] = {(yaxis[0] / (ysize - 1)) , (yaxis[1] / (ysize - 1)) , (yaxis[2] / (ysize - 1))};
   double zdelta[3] = {(zaxis[0] / (zsize - 1)) , (zaxis[1] / (zsize - 1)) , (zaxis[2] / (zsize - 1))};
@@ -600,49 +615,69 @@ void VolumetricData::crop(double crop_minx, double crop_miny, double crop_minz, 
   int padyp = int((crop_maxy - origin[1] - yaxis[1])/ydelta[1]);
   int padzp = int((crop_maxz - origin[2] - zaxis[2])/zdelta[2]);
 
+  // the pad() method will update datain/datamax for us
   pad(padxm, padxp, padym, padyp, padzm, padzp);
-
 }
 
+
 void VolumetricData::clamp(float min_value, float max_value) {
-  
+  // clamp the voxel values themselves
   for (long i=0; i<gridsize(); i++) {
     if (data[i] < min_value) data[i] = min_value;
     else if (data[i] > max_value) data[i] = max_value;
   }
-}
 
+  // update datamin/datamax as a result of the value clamping operation
+  if (datamin < min_value)
+    datamin = min_value;
+
+  if (datamax > max_value)
+    datamax = max_value;
+}
 
 
 void VolumetricData::scale_by(float ff) {
-
   for (long i=0; i<gridsize(); i++) {
     data[i] *= ff; 
   }
-  minmax_1fv_aligned(data, gridsize(), &datamin, &datamax);
 
+  // update datamin/datamax as a result of the value scaling operation
+  datamin *= ff;
+  datamax *= ff;
 }
 
-void VolumetricData::scalar_add(float ff) {
 
+void VolumetricData::scalar_add(float ff) {
   for (long i=0; i<gridsize(); i++){
     data[i] += ff;
   }
-  minmax_1fv_aligned(data, gridsize(), &datamin, &datamax);
 
+  // update datamin/datamax as a result of the scalar addition operation
+  datamin += ff;
+  datamax += ff;
 }
 
-void VolumetricData::rescale_voxel_value_range(float min_value, float max_value) {
 
+void VolumetricData::rescale_voxel_value_range(float min_val, float max_val) {
+  float newvrange = max_val - min_val;
+  float oldvrange = datamax - datamin;
+  float vrangeratio = newvrange / oldvrange;
   for (long i=0; i<gridsize(); i++) {
-    data[i] = min_value + (max_value - min_value)*(data[i] - datamin)/(datamax - datamin);
+    data[i] = min_val + vrangeratio*(data[i] - datamin);
   }
-  minmax_1fv_aligned(data, gridsize(), &datamin, &datamax);
+
+  // update datamin/datamax as a result of the rescaling operation
+  datamin = min_val;
+  datamax = max_val;
 }
+
 
 // Downsample grid size by factor of 2
-//Changed from volutil so it doesn't support PMF; unclear
-//whether that is still important.
+// Changed from volutil so it doesn't support PMF; unclear
+// whether that is still important.
+//
+// XXX needs to be fixed+tested for multi-billion voxel maps
+//
 void VolumetricData::downsample() {
   int gx, gy, gz, j;
   
@@ -683,7 +718,11 @@ void VolumetricData::downsample() {
   minmax_1fv_aligned(data, gridsize(), &datamin, &datamax);
 }
 
+
 // Supersample grid size by factor of 2
+//
+// XXX needs to be fixed+tested for multi-billion voxel maps
+//
 void VolumetricData::supersample() {
   
   int gx, gy, gz;
@@ -805,8 +844,10 @@ void VolumetricData::supersample() {
 
 // Transform map to a sigma scale, so that isovalues in VMD correspond
 // to number of sigmas above the mean
+//
+// XXX needs to be fixed+tested for multi-billion voxel maps
+//
 void VolumetricData::sigma_scale() {
-  
   int size = gridsize();
   double mean = 0.;
   int i;
@@ -828,8 +869,12 @@ void VolumetricData::sigma_scale() {
 
 }
 
+
 // Makes a mask out of a map
 // i.e. all values > 0 are set to 1
+//
+// XXX needs to be fixed+tested for multi-billion voxel maps
+//
 void VolumetricData::binmask() {
   clamp(0., FLT_MAX);
   int i;
@@ -839,6 +884,12 @@ void VolumetricData::binmask() {
   minmax_1fv_aligned(data, gridsize(), &datamin, &datamax);
 }
 
+
+//
+// XXX will this work for an arbitrarily large sigma???
+// XXX does it need to?
+// XXX needs to be fixed+tested for multi-billion voxel maps
+//
 void VolumetricData::gaussian_blur(double sigma) {
 /*#if defined(VMDCUDA)
   bool cuda = true;
@@ -854,3 +905,6 @@ void VolumetricData::gaussian_blur(double sigma) {
   data = gaussian_f->get_image();
   minmax_1fv_aligned(data, gridsize(), &datamin, &datamax);
 }
+
+
+

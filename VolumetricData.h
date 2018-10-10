@@ -11,7 +11,7 @@
  *
  *	$RCSfile: VolumetricData.h,v $
  *	$Author: johns $	$Locker:  $		$State: Exp $
- *	$Revision: 1.37 $	$Date: 2018/09/07 19:13:45 $
+ *	$Revision: 1.38 $	$Date: 2018/10/10 17:51:44 $
  *
  ***************************************************************************
  * DESCRIPTION:
@@ -22,8 +22,6 @@
 
 #ifndef VOLUMETRICDATA_H
 #define VOLUMETRICDATA_H
-#define MIN(X,Y) (((X)<(Y))? (X) : (Y))
-#define MAX(X,Y) (((X)>(Y))? (X) : (Y))
 
 /// Volumetric data class for potential maps, electron density maps, etc
 class VolumetricData {
@@ -91,7 +89,6 @@ public:
   float voxel_value_from_coord_safe(float xpos, float ypos, float zpos) const;
   float voxel_value_interpolate_from_coord_safe(float xpos, float ypos, float zpos) const;
 
-
   /// (re)compute the volume gradient
   void compute_volume_gradient(void);
 
@@ -116,21 +113,10 @@ public:
   void voxel_gradient_from_coord(const float *coord, float *gradient) const;
   void voxel_gradient_interpolate_from_coord(const float *coord, float *gradient) const;
 
-  /// Cubic interpolation used by supersample
-  inline float cubic_interp(float y0, float y1, float y2, float y3, float mu) {
-    float mu2 = mu*mu;
-    float a0 = y3 - y2 - y0 + y1;
-    float a1 = y0 - y1 - a0;
-    float a2 = y2 - y0;
-    float a3 = y1;
-
-    return (a0*mu*mu2+a1*mu2+a2*mu+a3);
-  }
-  
   /// get the cartesian coordinate of a voxel given its x,y,z indices
   inline void voxel_coord(int x, int y, int z, 
                           float &gx, float &gy, float &gz, 
-                          VolumetricData *vol) {
+                          VolumetricData *vol) const {
     float xdelta[3], ydelta[3], zdelta[3];
     vol->cell_axes(xdelta, ydelta, zdelta);
     
@@ -139,18 +125,17 @@ public:
     gz = vol->origin[2] + (x * xdelta[2]) + (y * ydelta[2]) + (z * zdelta[2]);
   }
 
-
-  /// get the cartesian coordinate of a voxel given its 1D index 
-  inline void voxel_coord(int i, float &x, float &y, float &z, 
-                          VolumetricData *vol) {
+  /// get the cartesian coordinate of a voxel given its 1-D index 
+  inline void voxel_coord(long i, float &x, float &y, float &z, 
+                          VolumetricData *vol) const {
     float xdelta[3], ydelta[3], zdelta[3];
     vol->cell_axes(xdelta, ydelta, zdelta);
-    int xsize = vol->xsize;
-    int ysize = vol->ysize;
+    long xsize = vol->xsize;
+    long ysize = vol->ysize;
     
-    int gz = i / (ysize*xsize);
-    int gy = (i / xsize) % ysize;
-    int gx = i % xsize;
+    long gz = i / (ysize*xsize);
+    long gy = (i / xsize) % ysize;
+    long gx = i % xsize;
 
     x = vol->origin[0] + (gx * xdelta[0]) + (gy * ydelta[0]) + (gz * zdelta[0]);
     y = vol->origin[1] + (gx * xdelta[1]) + (gy * ydelta[1]) + (gz * zdelta[1]);
@@ -192,8 +177,21 @@ public:
   /// Make a binary mask out of a map, i.e. all values > 0 are set to 1
   void binmask();
   
-  ///Guassian Blur using algorithm from Segmentation
+  /// Guassian blur by sigma
   void gaussian_blur(double sigma);
+
+private:
+  /// Cubic interpolation used by supersample
+  inline float cubic_interp(float y0, float y1, float y2, float y3, float mu) const {
+    float mu2 = mu*mu;
+    float a0 = y3 - y2 - y0 + y1;
+    float a1 = y0 - y1 - a0;
+    float a2 = y2 - y0;
+    float a3 = y1;
+
+    return (a0*mu*mu2+a1*mu2+a2*mu+a3);
+  }
+  
 };
 
 
