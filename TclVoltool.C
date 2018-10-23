@@ -1956,7 +1956,8 @@ int density_binmask(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *i
   if (argc < 3) {
     Tcl_SetResult(interp, (char *) "usage: voltool "
       "binmask [options]\n"
-      "    options:  -i <input map> specifies new density filename to load.\n"
+      "    options:  -threshold <thresold value> set values above threshold to 1. Defaults to 0."
+      "              -i <input map> specifies new density filename to load.\n"
       "              -mol <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
       "              -o <filename> write density to file.\n",
@@ -1964,9 +1965,10 @@ int density_binmask(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *i
     return TCL_ERROR;
   }
 
-
+  
   int molid = -1;
   int volid = 0;
+  double threshold = 0.0;
   const char *input_map = NULL;
   const char *outputmap = NULL;
   MoleculeList *mlist = app->moleculeList;
@@ -2016,7 +2018,19 @@ int density_binmask(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *i
         outputmap = Tcl_GetStringFromObj(objv[i+1], NULL);
       }
     }
+    
+    if (!strcmp(opt, "-threshold")) {
+      if (i == argc-1){
+        Tcl_AppendResult(interp, "No threshold specified",NULL);
+        return TCL_ERROR;
+      } else if ( Tcl_GetDoubleFromObj(interp, objv[i+1], &threshold) != TCL_OK) {
+        Tcl_AppendResult(interp, "\n threshold incorrectly specified",NULL);
+        return TCL_ERROR;
+      }
+    }
   }
+  
+  
   Molecule *volmol = NULL;
   VolumetricData *volmapA = NULL;
   if (molid > -1) {
@@ -2037,7 +2051,7 @@ int density_binmask(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *i
     return TCL_ERROR;
   }
 
-  volmapA->binmask(0.0); 
+  volmapA->binmask(threshold); 
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
   if (outputmap != NULL) {
