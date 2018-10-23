@@ -864,10 +864,10 @@ void average(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvol
 
     if (interp) newvol->data[i] = \
       (mapA->voxel_value_interpolate_from_coord_safe(x,y,z) + \
-      mapB->voxel_value_interpolate_from_coord_safe(x,y,z))/2;
+      mapB->voxel_value_interpolate_from_coord_safe(x,y,z))*0.5;
     else newvol->data[i] = \
       (mapA->voxel_value_from_coord_safe(x,y,z) + \
-      mapB->voxel_value_from_coord_safe(x,y,z))/2;
+      mapB->voxel_value_from_coord_safe(x,y,z))*0.5;
   } 
 
 }
