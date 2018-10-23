@@ -72,16 +72,9 @@ void init_from_intersection(VolumetricData *mapA, const VolumetricData *mapB, Vo
                     dot_prod(newvol->yaxis,mapB->yaxis)*mapB->ysize/dot_prod(mapB->yaxis,mapB->yaxis));
   newvol->zsize = (int) MAX(dot_prod(newvol->zaxis,mapA->zaxis)*mapA->zsize/dot_prod(mapA->zaxis,mapA->zaxis), \
                     dot_prod(newvol->zaxis,mapB->zaxis)*mapB->zsize/dot_prod(mapB->zaxis,mapB->zaxis));
-/*   
-  for (d=0; d<3; d++) {
-    newvol->xdelta[d] = newvol->xaxis[d]/(newvol->xsize-1);
-    newvol->ydelta[d] = newvol->yaxis[d]/(newvol->ysize-1);
-    newvol->zdelta[d] = newvol->zaxis[d]/(newvol->zsize-1);
-  }
- */ 
   // Create map...
   if (newvol->data) delete[] newvol->data;
-  newvol->data = new float[newvol->xsize*newvol->ysize*newvol->zsize];
+  newvol->data = new float[newvol->gridsize()];
 }
 
 /// creates axes, bounding box and allocates data based on 
@@ -110,16 +103,9 @@ void init_from_intersection(VolumetricData *mapA, VolumetricData *mapB, Volumetr
                     dot_prod(newvol->yaxis,mapB->yaxis)*mapB->ysize/dot_prod(mapB->yaxis,mapB->yaxis));
   newvol->zsize = (int) MAX(dot_prod(newvol->zaxis,mapA->zaxis)*mapA->zsize/dot_prod(mapA->zaxis,mapA->zaxis), \
                     dot_prod(newvol->zaxis,mapB->zaxis)*mapB->zsize/dot_prod(mapB->zaxis,mapB->zaxis));
-/*   
-  for (d=0; d<3; d++) {
-    newvol->xdelta[d] = newvol->xaxis[d]/(newvol->xsize-1);
-    newvol->ydelta[d] = newvol->yaxis[d]/(newvol->ysize-1);
-    newvol->zdelta[d] = newvol->zaxis[d]/(newvol->zsize-1);
-  }
- */ 
   // Create map...
   if (newvol->data) delete[] newvol->data;
-  newvol->data = new float[newvol->xsize*newvol->ysize*newvol->zsize];
+  newvol->data = new float[newvol->gridsize()];
 }
 
 
@@ -155,16 +141,9 @@ void init_from_union(VolumetricData *mapA, const VolumetricData *mapB, Volumetri
                     dot_prod(newvol->yaxis,mapB->yaxis)*mapB->ysize/dot_prod(mapB->yaxis,mapB->yaxis));
   newvol->zsize = (int) MAX(dot_prod(newvol->zaxis,mapA->zaxis)*mapA->zsize/dot_prod(mapA->zaxis,mapA->zaxis), \
                     dot_prod(newvol->zaxis,mapB->zaxis)*mapB->zsize/dot_prod(mapB->zaxis,mapB->zaxis));
-/*  
-  for (d=0; d<3; d++) {
-    xdelta[d] = xaxis[d]/(xsize-1);
-    ydelta[d] = yaxis[d]/(ysize-1);
-    zdelta[d] = zaxis[d]/(zsize-1);
-  }
-  */
   // Create map...
   if (newvol->data) delete[] newvol->data;
-  newvol->data = new float[newvol->xsize*newvol->ysize*newvol->zsize];
+  newvol->data = new float[newvol->gridsize()];
 }
 
 void init_from_identity(VolumetricData *mapA, VolumetricData *newvol) {
@@ -177,17 +156,9 @@ void init_from_identity(VolumetricData *mapA, VolumetricData *newvol) {
   newvol->xsize = mapA->xsize;
   newvol->ysize = mapA->ysize;
   newvol->zsize = mapA->zsize;
-/*    
-  int d;
-  for (d=0; d<3; d++) {
-    xdelta[d] = xaxis[d]/(xsize-1);
-    ydelta[d] = yaxis[d]/(ysize-1);
-    zdelta[d] = zaxis[d]/(zsize-1);
-  }
-  */
   // Create map...
   if (newvol->data) delete[] newvol->data;
-  newvol->data = new float[newvol->xsize*newvol->ysize*newvol->zsize];
+  newvol->data = new float[newvol->gridsize()];
 }
 
 
@@ -223,16 +194,9 @@ void init_from_union(VolumetricData *mapA, VolumetricData *mapB, VolumetricData 
                     dot_prod(newvol->yaxis,mapB->yaxis)*mapB->ysize/dot_prod(mapB->yaxis,mapB->yaxis));
   newvol->zsize = (int) MAX(dot_prod(newvol->zaxis,mapA->zaxis)*mapA->zsize/dot_prod(mapA->zaxis,mapA->zaxis), \
                     dot_prod(newvol->zaxis,mapB->zaxis)*mapB->zsize/dot_prod(mapB->zaxis,mapB->zaxis));
-/*  
-  for (d=0; d<3; d++) {
-    xdelta[d] = xaxis[d]/(xsize-1);
-    ydelta[d] = yaxis[d]/(ysize-1);
-    zdelta[d] = zaxis[d]/(zsize-1);
-  }
-  */
   // Create map...
   if (newvol->data) delete[] newvol->data;
-  newvol->data = new float[newvol->xsize*newvol->ysize*newvol->zsize];
+  newvol->data = new float[newvol->gridsize()];
 }
 
 // Pad each side of the volmap's grid with zeros. Negative padding results
@@ -791,7 +755,7 @@ void add(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvol, bo
     // INTERSECTION VERSION
     init_from_intersection(mapA, mapB, newvol);
   }
-  for (int i=0; i<newvol->xsize*newvol->ysize*newvol->zsize; i++){
+  for (long i=0; i<newvol->gridsize(); i++){
     float x, y, z;
     voxel_coord(i, x, y, z, newvol);
 
@@ -818,7 +782,7 @@ void subtract(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvo
     // INTERSECTION VERSION
     init_from_intersection(mapA, mapB, newvol);
   }
-  for (int i=0; i<newvol->xsize*newvol->ysize*newvol->zsize; i++){
+  for (long i=0; i<newvol->gridsize(); i++){
     float x, y, z;
     voxel_coord(i, x, y, z, newvol);
 
@@ -841,7 +805,7 @@ void multiply(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvo
   if ( USE_UNION) {
     // UNION VERSION
     init_from_union(mapA, mapB, newvol);
-    for (int i=0; i<newvol->xsize*newvol->ysize*newvol->zsize; i++){
+    for (long i=0; i<newvol->gridsize(); i++){
       float x, y, z;
       float voxelA, voxelB;
       voxel_coord(i, x, y, z, newvol);
@@ -866,7 +830,7 @@ void multiply(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvo
     // INTERSECTION VERSION
     init_from_intersection(mapA, mapB, newvol);
     
-    for (int i=0; i<newvol->xsize*newvol->ysize*newvol->zsize; i++){
+    for (long i=0; i<newvol->gridsize(); i++){
       float x, y, z;
       voxel_coord(i, x, y, z, newvol);
 
@@ -894,7 +858,7 @@ void average(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvol
     // INTERSECTION VERSION
     init_from_intersection(mapA, mapB, newvol);
   }
-  for (int i=0; i<newvol->xsize*newvol->ysize*newvol->zsize; i++){
+  for (long i=0; i<newvol->gridsize(); i++){
     float x, y, z;
     voxel_coord(i, x, y, z, newvol);
 
