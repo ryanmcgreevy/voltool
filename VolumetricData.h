@@ -11,7 +11,7 @@
  *
  *	$RCSfile: VolumetricData.h,v $
  *	$Author: johns $	$Locker:  $		$State: Exp $
- *	$Revision: 1.38 $	$Date: 2018/10/10 17:51:44 $
+ *	$Revision: 1.43 $	$Date: 2018/10/22 18:47:51 $
  *
  ***************************************************************************
  * DESCRIPTION:
@@ -35,7 +35,6 @@ public:
   float *data;             ///< raw data, total of xsize*ysize*zsize voxels
                            ///< stored x varying fastest, then y, then z.
   float *gradient;         ///< negated normalized volume gradient map
-  float datamin, datamax;  ///< min and max data values 
 
   /// constructor
   VolumetricData(const char *name, const float *origin, 
@@ -52,8 +51,19 @@ public:
   /// return total number of gridpoints
   long gridsize() const { return long(xsize)*long(ysize)*long(zsize); }
 
+  /// return min/max data values
+  void datarange(float &min, float &max);
+
   /// Sets data name to an internal copy of the provided string
   void set_name(const char* name);
+
+  /// return the mean value of the density map, 
+  /// implemented via O(1) access to a cached value
+  float mean();
+
+  /// return the standard deviation (sigma) of the density map, 
+  /// implemented via O(1) access to a cached value
+  float sigma();
 
   /// return cell side lengths
   void cell_lengths(float *xl, float *yl, float *zl) const;
@@ -174,13 +184,44 @@ public:
   /// to number of sigmas above the mean
   void sigma_scale();
 
-  /// Make a binary mask out of a map, i.e. all values > 0 are set to 1
-  void binmask();
+  /// Make a binary mask out of a map, i.e. map values > threshold 
+  /// are set to 1, and all others are set to 0.
+  void binmask(float threshold=0.0f);
   
   /// Guassian blur by sigma
   void gaussian_blur(double sigma);
 
 private:
+  bool minmax_isvalid;       ///< cached min/max values are current/valid
+  float cached_min;          ///< cached min voxel values
+  float cached_max;          ///< cached max voxel values 
+
+  bool mean_isvalid;         ///< cached mean value is current/valid
+  float cached_mean;         ///< cached mean value
+
+  bool sigma_isvalid;        ///< cached sigma value is current/valid
+  float cached_sigma;        ///< cached sigma value
+
+  void compute_minmaxmean(); ///< compute min/max/mean, encache results
+
+  /// invalidate the cached min/max value
+  void invalidate_minmax();
+
+  /// compute the min/max values of a map from the voxel data, encache result
+  void compute_minmax();
+
+  /// invalidate the cached mean value
+  void invalidate_mean();
+
+  /// compute the mean of a map from the voxel data, ecache result
+  void compute_mean();
+
+  /// invalidate the cached sigma value
+  void invalidate_sigma();
+
+  /// compute sigma for a map from the voxel data, encache the result
+  void compute_sigma();
+
   /// Cubic interpolation used by supersample
   inline float cubic_interp(float y0, float y1, float y2, float y3, float mu) const {
     float mu2 = mu*mu;

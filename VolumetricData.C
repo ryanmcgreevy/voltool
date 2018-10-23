@@ -11,7 +11,7 @@
  *
  *	$RCSfile: VolumetricData.C,v $
  *	$Author: johns $	$Locker:  $		$State: Exp $
- *	$Revision: 1.43 $	$Date: 2018/10/10 18:19:33 $
+ *	$Revision: 1.55 $	$Date: 2018/10/22 18:47:51 $
  *
  ***************************************************************************
  * DESCRIPTION:
@@ -48,7 +48,9 @@ VolumetricData::VolumetricData(const char *dataname, const float *o,
   zsize = zs;
 
   gradient = NULL;
-  datamin = datamax = 0;
+  invalidate_minmax();   // min/max will be computed on next request
+  invalidate_mean();     // mean will be computed on first request
+  invalidate_sigma();    // sigma will be computed on first request
 
   for (int i=0; i<3; i++) {
     origin[i] = (double)o[i];
@@ -58,21 +60,7 @@ VolumetricData::VolumetricData(const char *dataname, const float *o,
   } 
 
   const long ndata = long(xsize)*long(ysize)*long(zsize);
-  if (ndata > 0) {
-#if 1
-    // use fast 16-byte-aligned min/max routine
-    minmax_1fv_aligned(data, ndata, &datamin, &datamax);
-#else
-    float min, max;
-    min = max = data[0];
-    for (long j=1; j<ndata; j++) {
-      if (min > data[j]) min = data[j];
-      if (max < data[j]) max = data[j];
-    }
-    datamin = min;
-    datamax = max;
-#endif
-  }
+  compute_minmax();
 }
 
 
@@ -87,7 +75,9 @@ VolumetricData::VolumetricData(const char *dataname, const double *o,
   zsize = zs;
 
   gradient = NULL;
-  datamin = datamax = 0;
+  invalidate_minmax();   // min/max will be computed on next request
+  invalidate_mean();     // mean will be computed on first request
+  invalidate_sigma();    // sigma will be computed on first request
 
   for (int i=0; i<3; i++) {
     origin[i] = o[i];
@@ -97,21 +87,7 @@ VolumetricData::VolumetricData(const char *dataname, const double *o,
   } 
 
   const long ndata = long(xsize)*long(ysize)*long(zsize);
-  if (ndata > 0) {
-#if 1
-    // use fast 16-byte-aligned min/max routine
-    minmax_1fv_aligned(data, ndata, &datamin, &datamax);
-#else
-    float min, max;
-    min = max = data[0];
-    for (long j=1; j<ndata; j++) {
-      if (min > data[j]) min = data[j];
-      if (max < data[j]) max = data[j];
-    }
-    datamin = min;
-    datamax = max;
-#endif
-  }
+  compute_minmax();
 }
 
 
@@ -121,6 +97,7 @@ VolumetricData::~VolumetricData() {
   delete [] data;
   delete [] gradient;
 }
+
 
 /// Set the current human readable name of the dataset by the
 /// given string.
@@ -344,6 +321,7 @@ float VolumetricData::voxel_value_interpolate_from_coord(float xpos, float ypos,
   return voxel_value_interpolate(gridpoint[0], gridpoint[1], gridpoint[2]);
 }
 
+
 /// return the value of the voxel nearest to the cartesian coordinate
 /// this safe version returns zero if the coordinates are outside the map
 float VolumetricData::voxel_value_from_coord_safe(float xpos, float ypos, float zpos) const {
@@ -539,9 +517,6 @@ void VolumetricData::voxel_gradient_interpolate_from_coord(const float *coord, f
 
 // Pad each side of the volmap's grid with zeros. 
 // Negative padding results in cropping/trimming of the map
-//
-// XXX needs to be fixed+tested for multi-billion voxel maps
-//
 void VolumetricData::pad(int padxm, int padxp, int padym, int padyp, int padzm, int padzp) {
   double xdelta[3] = {(xaxis[0] / (xsize - 1)), (xaxis[1] / (xsize - 1)), (xaxis[2] / (xsize - 1))};
   double ydelta[3] = {(yaxis[0] / (ysize - 1)), (yaxis[1] / (ysize - 1)), (yaxis[2] / (ysize - 1))};
@@ -550,9 +525,10 @@ void VolumetricData::pad(int padxm, int padxp, int padym, int padyp, int padzm, 
   int xsize_new = MAX(1, xsize + padxm + padxp);
   int ysize_new = MAX(1, ysize + padym + padyp);
   int zsize_new = MAX(1, zsize + padzm + padzp);
-  
-  float *data_new = new float[gridsize()];
-  memset(data_new, 0, gridsize()*sizeof(float));
+ 
+  long newgridsize = long(xsize_new)*long(ysize_new)*long(zsize_new);
+  float *data_new = new float[newgridsize];
+  memset(data_new, 0, newgridsize*sizeof(float));
 
   int startx = MAX(0, padxm);
   int starty = MAX(0, padym);
@@ -562,10 +538,16 @@ void VolumetricData::pad(int padxm, int padxp, int padym, int padyp, int padzm, 
   int endz = MIN(zsize_new, zsize+padzm);
 
   int gx, gy, gz;
-  for (gx=startx; gx<endx; gx++)
-  for (gy=starty; gy<endy; gy++)
-  for (gz=startz; gz<endz; gz++)
-    data_new[gx + gy*xsize_new + gz*xsize_new*ysize_new] = data[(gx-padxm) + (gy-padym)*xsize + (gz-padzm)*xsize*ysize];
+  for (gz=startz; gz<endz; gz++) {
+    for (gy=starty; gy<endy; gy++) {
+      long oldyzaddrminpadxm = (gy-padym)*long(xsize) + 
+                               (gz-padzm)*long(xsize)*long(ysize) - padxm;
+      long newyzaddr = gy*long(xsize_new) + gz*long(xsize_new)*long(ysize_new);
+      for (gx=startx; gx<endx; gx++) {
+        data_new[gx + newyzaddr] = data[gx + oldyzaddrminpadxm];
+      }
+    }
+  }
 
   delete data;         ///< free the original map
   data = data_new;     ///< replace the original map with the new one
@@ -583,28 +565,39 @@ void VolumetricData::pad(int padxm, int padxp, int padym, int padyp, int padzm, 
   vec_scaled_add(origin, -padzm, zdelta);
 
   // Since an arbitrary part of the original map may have been
-  // cropped out, we have to recompute the datamin/datamax values
+  // cropped out, we have to recompute the min/max voxel values
   // from scratch.
   //
   // If we know that the map was only padded and not cropped,
   // we could avoid this and instead just update datamin/datamax
   // for the new zero-valued voxels that have been added to the edges.
-  //
-  // use fast 16-byte-aligned min/max routine
-  minmax_1fv_aligned(data, gridsize(), &datamin, &datamax);
+  invalidate_minmax();   // min/max will be computed on next request
+
+  // Both mean and sigma have to be recomputed from scratch when cropping.
+  // They could be scaled in the case of padding since we know how
+  // many new zero-valued voxels are added.
+  // For now we always recompute them.
+  invalidate_mean();     // mean will be computed on next request
+  invalidate_sigma();    // sigma will be computed on next request
+
+  // force complete destruction, deallocation, allocation, and 
+  // recomputation of the gradient since the actual map dimensions
+  // have changed and no longer match the old gradient
+  if (gradient) {
+    delete [] gradient;
+    gradient = NULL;
+    compute_volume_gradient();
+  }
 }
 
 
 // Crop the map based on minmax values given in coordinate space. If
 // the 'cropping box' exceeds the map boundaries, the map is padded
 // with zeroes. 
-//
-// XXX needs to be fixed+tested for multi-billion voxel maps
-//
 void VolumetricData::crop(double crop_minx, double crop_miny, double crop_minz, double crop_maxx, double crop_maxy, double crop_maxz) {
-  double xdelta[3] = {(xaxis[0] / (xsize - 1)) , (xaxis[1] / (xsize - 1)) , (xaxis[2] / (xsize - 1))};
-  double ydelta[3] = {(yaxis[0] / (ysize - 1)) , (yaxis[1] / (ysize - 1)) , (yaxis[2] / (ysize - 1))};
-  double zdelta[3] = {(zaxis[0] / (zsize - 1)) , (zaxis[1] / (zsize - 1)) , (zaxis[2] / (zsize - 1))};
+  double xdelta[3] = {(xaxis[0] / (xsize - 1)), (xaxis[1] / (xsize - 1)), (xaxis[2] / (xsize - 1))};
+  double ydelta[3] = {(yaxis[0] / (ysize - 1)), (yaxis[1] / (ysize - 1)), (yaxis[2] / (ysize - 1))};
+  double zdelta[3] = {(zaxis[0] / (zsize - 1)), (zaxis[1] / (zsize - 1)), (zaxis[2] / (zsize - 1))};
 
   // Right now, only works for orthogonal cells.
   int padxm = int((origin[0] - crop_minx)/xdelta[0]);
@@ -628,11 +621,19 @@ void VolumetricData::clamp(float min_value, float max_value) {
   }
 
   // update datamin/datamax as a result of the value clamping operation
-  if (datamin < min_value)
-    datamin = min_value;
+  if (cached_min < min_value)
+    cached_min = min_value;
 
-  if (datamax > max_value)
-    datamax = max_value;
+  if (cached_max > max_value)
+    cached_max = max_value;
+
+  invalidate_mean();     // mean will be computed on next request
+  invalidate_sigma();    // sigma will be computed on next request
+
+  // force regeneration of volume gradient to match clamped voxels
+  if (gradient) {
+    compute_volume_gradient(); // map size constant, so recompute only
+  }
 }
 
 
@@ -641,9 +642,17 @@ void VolumetricData::scale_by(float ff) {
     data[i] *= ff; 
   }
 
-  // update datamin/datamax as a result of the value scaling operation
-  datamin *= ff;
-  datamax *= ff;
+  // update min/max as a result of the value scaling operation
+  cached_min *= ff;
+  cached_max *= ff;
+
+  invalidate_mean();     // mean will be computed on next request
+  invalidate_sigma();    // sigma will be computed on next request
+
+  // force regeneration of volume gradient to match scaled voxels
+  if (gradient) {
+    compute_volume_gradient(); // map size constant, so recompute only
+  }
 }
 
 
@@ -653,34 +662,43 @@ void VolumetricData::scalar_add(float ff) {
   }
 
   // update datamin/datamax as a result of the scalar addition operation
-  datamin += ff;
-  datamax += ff;
+  cached_min += ff;
+  cached_max += ff;
+
+  invalidate_mean();     // mean will be computed on next request
+  invalidate_sigma();    // sigma will be computed on next request
+
+  // adding a scalar has no impact on the volume gradient
+  // so we leave the existing gradient in place, unmodified 
 }
 
 
 void VolumetricData::rescale_voxel_value_range(float min_val, float max_val) {
   float newvrange = max_val - min_val;
-  float oldvrange = datamax - datamin;
+  float oldvrange = cached_max - cached_min;
   float vrangeratio = newvrange / oldvrange;
   for (long i=0; i<gridsize(); i++) {
-    data[i] = min_val + vrangeratio*(data[i] - datamin);
+    data[i] = min_val + vrangeratio*(data[i] - cached_min);
   }
 
-  // update datamin/datamax as a result of the rescaling operation
-  datamin = min_val;
-  datamax = max_val;
+  // update min/max as a result of the rescaling operation
+  cached_min = min_val;
+  cached_max = max_val;
+
+  invalidate_mean();     // mean will be computed on next request
+  invalidate_sigma();    // sigma will be computed on next request
+
+  // force regeneration of volume gradient to match scaled voxels
+  if (gradient) {
+    compute_volume_gradient(); // map size constant, so recompute only
+  }
 }
 
 
 // Downsample grid size by factor of 2
 // Changed from volutil so it doesn't support PMF; unclear
 // whether that is still important.
-//
-// XXX needs to be fixed+tested for multi-billion voxel maps
-//
 void VolumetricData::downsample() {
-  int gx, gy, gz, j;
-  
   int xsize_new = xsize/2;
   int ysize_new = ysize/2;
   int zsize_new = zsize/2;
@@ -688,200 +706,259 @@ void VolumetricData::downsample() {
   
   int index_shift[8] = {0, 1, xsize, xsize+1, xsize*ysize, xsize*ysize + 1, xsize*ysize + xsize, xsize*ysize + xsize + 1};
   
-  for (gx=0; gx<xsize_new; gx++)
-  for (gy=0; gy<ysize_new; gy++)
+  int gx, gy, gz, j;
+  const double eighth = 1.0/8.0;
   for (gz=0; gz<zsize_new; gz++) {
-    int n_new = gx + gy*xsize_new + gz*xsize_new*ysize_new;
-    int n = 2*(gx + gy*xsize + gz*xsize*ysize);
-    double Z=0.;
-    for (j=0; j<8; j++) Z += data[n+index_shift[j]];
-    data_new[n_new] = Z/8.;
-  }
-  
+    for (gy=0; gy<ysize_new; gy++) {
+      long oldyzaddr = gy*long(xsize) + gz*long(xsize)*long(ysize);
+      long newyzaddr = gy*long(xsize_new) + gz*long(xsize_new)*long(ysize_new);
+      for (gx=0; gx<xsize_new; gx++) {
+        int n = 2*(gx + oldyzaddr);
+        int n_new = gx + newyzaddr;
+        double Z=0.0;
+        for (j=0; j<8; j++) 
+          Z += data[n+index_shift[j]];
+
+        data_new[n_new] = Z * eighth;
+      }
+    }
+  } 
+
   xsize = xsize_new;
   ysize = ysize_new;
   zsize = zsize_new;
-  const float old_xaxis[3] = {(float)xaxis[0], (float)xaxis[1], (float)xaxis[2]};
-  const float old_yaxis[3] = {(float)yaxis[0], (float)yaxis[1], (float)yaxis[2]};
-  const float old_zaxis[3] = {(float)zaxis[0], (float)zaxis[1], (float)zaxis[2]};
-  
-  float scaling_factor = 0.5*(xsize)/(xsize/2);
-  vec_scale((float *)xaxis, scaling_factor, old_xaxis);
-  scaling_factor = 0.5*(ysize)/(ysize/2);
-  vec_scale((float *)yaxis, scaling_factor, old_yaxis);
-  scaling_factor = 0.5*(zsize)/(zsize/2);
-  vec_scale((float *)zaxis, scaling_factor, old_zaxis);
-  
+
+  double xscale = 0.5*(xsize)/(xsize/2);
+  double yscale = 0.5*(ysize)/(ysize/2);
+  double zscale = 0.5*(zsize)/(zsize/2);
+  int i;
+  for (i=0; i<3; i++) {
+    xaxis[i] *= xscale; 
+    yaxis[i] *= yscale; 
+    zaxis[i] *= zscale; 
+  } 
       
   delete[] data;
   data = data_new;
-  minmax_1fv_aligned(data, gridsize(), &datamin, &datamax);
+
+  invalidate_minmax();   // min/max will be computed on next request
+  invalidate_mean();     // mean will be computed on next request
+  invalidate_sigma();    // sigma will be computed on next request
+
+  // force regeneration of volume gradient to match resampled voxels
+  if (gradient) {
+    delete [] gradient;
+    gradient = NULL;
+    compute_volume_gradient();
+  }
 }
 
 
 // Supersample grid size by factor of 2
-//
-// XXX needs to be fixed+tested for multi-billion voxel maps
-//
 void VolumetricData::supersample() {
-  
   int gx, gy, gz;
   int xsize_new = xsize*2-1;
   int ysize_new = ysize*2-1;
   int zsize_new = zsize*2-1;
-  int xysize = xsize*ysize;
-  int xysize_new = xsize_new*ysize_new;
-  float *data_new = new float[(long)xsize_new*(long)ysize_new*(long)zsize_new];
+  long xysize = long(xsize)*long(ysize);
+  long xysize_new = long(xsize_new)*long(ysize_new);
+  float *data_new = new float[long(xsize_new)*long(ysize_new)*long(zsize_new)];
   
-  // Copy map to the finer grid
-  for (gx=0; gx<xsize; gx++)
-    for (gy=0; gy<ysize; gy++)
-      for (gz=0; gz<zsize; gz++)
-        data_new[2*gx + 2*gy*xsize_new + 2*gz*xysize_new] = \
-          data[gx + gy*xsize + gz*xysize];
+  // Copy original voxels to the matching voxels in the new finer grid
+  for (gz=0; gz<zsize; gz++) {
+    for (gy=0; gy<ysize; gy++) {
+      long oldyzplane = long(gy)*long(xsize) + long(gz)*xysize;
+      long newyzplane = 2L*long(gy)*long(xsize_new) + 2L*long(gz)*xysize_new;
 
-  // Perform cubic interpolation for the rest of the voxels
+      // this only copies the matching (even) voxels over, the
+      // odd ones must be added through interpolation later
+      for (gx=0; gx<xsize; gx++) {
+        data_new[2*gx + newyzplane] = data[gx + oldyzplane];
+      }
+    }
+  }
+
+  // Perform cubic interpolation for the rest of the (odd) voxels had not
+  // yet been assigned above...
 
   // x direction
-  for (gx=1; gx<xsize-2; gx++)
-    for (gy=0; gy<ysize; gy++)
-      for (gz=0; gz<zsize; gz++)
-        data_new[2*gx+1 + 2*gy*xsize_new + 2*gz*xysize_new] = \
-          cubic_interp(data_new[(2*gx-2) + 2*gy*xsize_new + 2*gz*xysize_new],
-                       data_new[(2*gx)   + 2*gy*xsize_new + 2*gz*xysize_new],
-                       data_new[(2*gx+2) + 2*gy*xsize_new + 2*gz*xysize_new],
-                       data_new[(2*gx+4) + 2*gy*xsize_new + 2*gz*xysize_new],
+  for (gz=0; gz<zsize; gz++) {
+    for (gy=0; gy<ysize; gy++) {
+      long newyzplane = 2L*long(gy)*long(xsize_new) + 2L*long(gz)*xysize_new;
+      for (gx=1; gx<xsize-2; gx++) {
+
+        // compute odd voxels through cubic interpolation
+        data_new[2*gx+1 + newyzplane] = 
+          cubic_interp(data_new[(2*gx-2) + newyzplane],
+                       data_new[(2*gx)   + newyzplane],
+                       data_new[(2*gx+2) + newyzplane],
+                       data_new[(2*gx+4) + newyzplane],
                        0.5);
+      }
+    }
+  }
+
   // borders
-  for (gy=0; gy<ysize; gy++)
-    for (gz=0; gz<zsize; gz++) {
+  for (gz=0; gz<zsize; gz++) {
+    for (gy=0; gy<ysize; gy++) {
+      long newyzplane = 2L*long(gy)*long(xsize_new) + 2L*long(gz)*xysize_new;
+
+      // compute odd voxels through cubic interpolation
       // gx = 0
-      data_new[1 + 2*gy*xsize_new + 2*gz*xysize_new] = \
-        cubic_interp(data_new[0 + 2*gy*xsize_new + 2*gz*xysize_new],
-                     data_new[0 + 2*gy*xsize_new + 2*gz*xysize_new],
-                     data_new[2 + 2*gy*xsize_new + 2*gz*xysize_new],
-                     data_new[4 + 2*gy*xsize_new + 2*gz*xysize_new],
+      data_new[1 + newyzplane] = 
+        cubic_interp(data_new[0 + newyzplane],
+                     data_new[0 + newyzplane],
+                     data_new[2 + newyzplane],
+                     data_new[4 + newyzplane],
                      0.5);
+
       // gx = xsize-2
-      data_new[2*(xsize-2)+1 + 2*gy*xsize_new + 2*gz*xysize_new] = \
-        cubic_interp(data_new[2*(xsize-2)-2 + 2*gy*xsize_new + 2*gz*xysize_new],
-                     data_new[2*(xsize-2)   + 2*gy*xsize_new + 2*gz*xysize_new],
-                     data_new[2*(xsize-2)+2 + 2*gy*xsize_new + 2*gz*xysize_new],
-                     data_new[2*(xsize-2)+2 + 2*gy*xsize_new + 2*gz*xysize_new],
+      data_new[2*(xsize-2)+1 + newyzplane] = 
+        cubic_interp(data_new[2*(xsize-2)-2 + newyzplane],
+                     data_new[2*(xsize-2)   + newyzplane],
+                     data_new[2*(xsize-2)+2 + newyzplane],
+                     data_new[2*(xsize-2)+2 + newyzplane],
                      0.5);
     }
+  }
 
   // y direction
-  for (gx=0; gx<xsize_new; gx++)
-    for (gy=1; gy<ysize-2; gy++)
-      for (gz=0; gz<zsize; gz++)
-        data_new[gx + (2*gy+1)*xsize_new + 2*gz*xysize_new] = \
-          cubic_interp(data_new[gx + (2*gy-2)*xsize_new + 2*gz*xysize_new],
-                       data_new[gx + (2*gy)*xsize_new   + 2*gz*xysize_new],
-                       data_new[gx + (2*gy+2)*xsize_new + 2*gz*xysize_new],
-                       data_new[gx + (2*gy+4)*xsize_new + 2*gz*xysize_new],
+  for (gz=0; gz<zsize; gz++) {
+    for (gy=1; gy<ysize-2; gy++) {
+      long newzplane = 2L*long(gz)*xysize_new;
+      for (gx=0; gx<xsize_new; gx++) {
+        data_new[gx + (2*gy+1)*xsize_new + 2*gz*xysize_new] = 
+          cubic_interp(data_new[gx + (2*gy-2)*long(xsize_new) + newzplane],
+                       data_new[gx + (2*gy  )*long(xsize_new) + newzplane],
+                       data_new[gx + (2*gy+2)*long(xsize_new) + newzplane],
+                       data_new[gx + (2*gy+4)*long(xsize_new) + newzplane],
                        0.5);
+      }
+    }
+  }
+
   // borders
-  for (gx=0; gx<xsize_new; gx++)
-    for (gz=0; gz<zsize; gz++) {
+  for (gz=0; gz<zsize; gz++) {
+    long newzplane = 2L*long(gz)*xysize_new;
+    for (gx=0; gx<xsize_new; gx++) {
       // gy = 0
-      data_new[gx + 1*xsize_new + 2*gz*xysize_new] = \
-        cubic_interp(data_new[gx + 0*xsize_new + 2*gz*xysize_new],
-                     data_new[gx + 0*xsize_new + 2*gz*xysize_new],
-                     data_new[gx + 2*xsize_new + 2*gz*xysize_new],
-                     data_new[gx + 4*xsize_new + 2*gz*xysize_new],
+      data_new[gx + 1*xsize_new + newzplane] = \
+        cubic_interp(data_new[gx + 0*xsize_new + newzplane],
+                     data_new[gx + 0*xsize_new + newzplane],
+                     data_new[gx + 2*xsize_new + newzplane],
+                     data_new[gx + 4*xsize_new + newzplane],
                      0.5);
+
       // gy = ysize-2
       data_new[gx + (2*(ysize-2)+1)*xsize_new + 2*gz*xysize_new] = \
-        cubic_interp(data_new[gx + (2*(ysize-2)-2)*xsize_new + 2*gz*xysize_new],
-                     data_new[gx + 2*(ysize-2)*xsize_new     + 2*gz*xysize_new],
-                     data_new[gx + (2*(ysize-2)+2)*xsize_new + 2*gz*xysize_new],
-                     data_new[gx + (2*(ysize-2)+2)*xsize_new + 2*gz*xysize_new],
+        cubic_interp(data_new[gx + (2*(ysize-2)-2)*xsize_new + newzplane],
+                     data_new[gx +  2*(ysize-2)*xsize_new    + newzplane],
+                     data_new[gx + (2*(ysize-2)+2)*xsize_new + newzplane],
+                     data_new[gx + (2*(ysize-2)+2)*xsize_new + newzplane],
                      0.5);
     }
+  }
 
   // z direction
-  for (gx=0; gx<xsize_new; gx++)
-    for (gy=0; gy<ysize_new; gy++)
-      for (gz=1; gz<zsize-2; gz++)
-        data_new[gx + gy*xsize_new + (2*gz+1)*xysize_new] = \
-          cubic_interp(data_new[gx + gy*xsize_new + (2*gz-2)*xysize_new],
-                       data_new[gx + gy*xsize_new + (2*gz)*xysize_new],
-                       data_new[gx + gy*xsize_new + (2*gz+2)*xysize_new],
-                       data_new[gx + gy*xsize_new + (2*gz+4)*xysize_new],
+  for (gy=0; gy<ysize_new; gy++) {
+    for (gz=1; gz<zsize-2; gz++) {
+      long newyzplane = gy*long(xsize_new) + (2L*gz+1L)*long(xysize_new);
+      for (gx=0; gx<xsize_new; gx++) {
+        long newxplusyrow = gx + gy*long(xsize_new);
+        data_new[gx + newyzplane] = 
+          cubic_interp(data_new[newxplusyrow + (2*gz-2)*xysize_new],
+                       data_new[newxplusyrow + (2*gz  )*xysize_new],
+                       data_new[newxplusyrow + (2*gz+2)*xysize_new],
+                       data_new[newxplusyrow + (2*gz+4)*xysize_new],
                        0.5);
+      }
+    }
+  }
+
   // borders
-  for (gx=0; gx<xsize_new; gx++)
-    for (gy=0; gy<ysize_new; gy++) {
+  for (gy=0; gy<ysize_new; gy++) {
+    for (gx=0; gx<xsize_new; gx++) {
+      long newxplusyrow = gx + gy*long(xsize_new);
+
       // gz = 0
       data_new[gx + gy*xsize_new + 1*xysize_new] = \
-        cubic_interp(data_new[gx + gy*xsize_new + 0*xysize_new],
-                     data_new[gx + gy*xsize_new + 0*xysize_new],
-                     data_new[gx + gy*xsize_new + 2*xysize_new],
-                     data_new[gx + gy*xsize_new + 4*xysize_new],
+        cubic_interp(data_new[newxplusyrow + 0*xysize_new],
+                     data_new[newxplusyrow + 0*xysize_new],
+                     data_new[newxplusyrow + 2*xysize_new],
+                     data_new[newxplusyrow + 4*xysize_new],
                      0.5);
       // gz = zsize-2
       data_new[gx + gy*xsize_new + (2*(zsize-2)+1)*xysize_new] = \
-        cubic_interp(data_new[gx + gy*xsize_new + (2*(zsize-2)-2)*xysize_new],
-                     data_new[gx + gy*xsize_new + 2*(zsize-2)*xysize_new],
-                     data_new[gx + gy*xsize_new + (2*(zsize-2)+2)*xysize_new],
-                     data_new[gx + gy*xsize_new + (2*(zsize-2)+2)*xysize_new],
+        cubic_interp(data_new[newxplusyrow + (2*(zsize-2)-2)*xysize_new],
+                     data_new[newxplusyrow +  2*(zsize-2)*xysize_new],
+                     data_new[newxplusyrow + (2*(zsize-2)+2)*xysize_new],
+                     data_new[newxplusyrow + (2*(zsize-2)+2)*xysize_new],
                      0.5);
+    }
   }
-
 
   xsize = xsize_new;
   ysize = ysize_new;
   zsize = zsize_new;
-  //vscale(xdelta, 0.5);
-  //vscale(ydelta, 0.5);
-  //vscale(zdelta, 0.5);
 
   delete[] data;
   data = data_new;
-  minmax_1fv_aligned(data, gridsize(), &datamin, &datamax);
+
+  // XXX in principle we might expect that supersampling a map
+  //     would have no impact on the min/max and only a small 
+  //     affect on mean/sigma, but for paranoia's sake we will 
+  //     recompute them all for the time being...
+  invalidate_minmax();   // min/max will be computed on next request
+  invalidate_mean();     // mean will be computed on next request
+  invalidate_sigma();    // sigma will be computed on next request
+
+  // force regeneration of volume gradient to match resampled voxels
+  if (gradient) {
+    delete [] gradient;
+    gradient = NULL;
+    compute_volume_gradient();
+  }
 }
+
 
 // Transform map to a sigma scale, so that isovalues in VMD correspond
 // to number of sigmas above the mean
-//
-// XXX needs to be fixed+tested for multi-billion voxel maps
-//
 void VolumetricData::sigma_scale() {
-  int size = gridsize();
-  double mean = 0.;
-  int i;
-  for (i=0; i<size; i++)
-    mean += data[i];
-  mean /= size;
+  float oldmean = mean();
+  float oldsigma = sigma();
+  float oldsigma_inv = 1.0f / oldsigma;
 
-  double sigma = 0.;
-  for (i=0; i<size; i++)
-    sigma += (data[i] - mean)*(data[i] - mean);
-  sigma /= size;
-  sigma = sqrt(sigma);
-
-  for (i=0; i<size; i++) {
-    data[i] -= mean;
-    data[i] /= sigma;
+  for (long i=0; i<gridsize(); i++) {
+    data[i] -= oldmean;
+    data[i] *= oldsigma_inv;
   }
-  minmax_1fv_aligned(data, gridsize(), &datamin, &datamax);
 
+  invalidate_minmax();   // min/max will be computed on next request
+  invalidate_mean();     // mean will be computed on next request
+  invalidate_sigma();    // sigma will be computed on next request
+
+  // force regeneration of volume gradient to match rescaled voxels
+  if (gradient) {
+    compute_volume_gradient(); // map size constant, so recompute only
+  }
 }
 
 
-// Makes a mask out of a map
-// i.e. all values > 0 are set to 1
-//
-// XXX needs to be fixed+tested for multi-billion voxel maps
-//
-void VolumetricData::binmask() {
-  clamp(0., FLT_MAX);
-  int i;
-  for (i=0; i<gridsize(); i++) {
-    if (data[i] > 0) data[i] = 1;
+// Make a binary mask map for values above a threshold
+void VolumetricData::binmask(float threshold) {
+  for (long i=0; i<gridsize(); i++) {
+    float tmp=data[i];
+    data[i] = (tmp > threshold) ? 1 : 0;
   }
-  minmax_1fv_aligned(data, gridsize(), &datamin, &datamax);
+
+  invalidate_minmax();   // min/max will be computed on next request
+  invalidate_mean();     // mean will be computed on next request
+  invalidate_sigma();    // sigma will be computed on next request
+
+  // force regeneration of volume gradient to match masked voxels
+  if (gradient) {
+    compute_volume_gradient(); // map size constant, so recompute only
+  }
 }
 
 
@@ -903,8 +980,137 @@ void VolumetricData::gaussian_blur(double sigma) {
   
   delete[] data;
   data = gaussian_f->get_image();
-  minmax_1fv_aligned(data, gridsize(), &datamin, &datamax);
+
+  invalidate_minmax();   // min/max will be computed on next request
+  invalidate_mean();     // mean will be computed on next request
+  invalidate_sigma();    // sigma will be computed on next request
+
+  // force regeneration of volume gradient to match blurred voxels
+  if (gradient) {
+    compute_volume_gradient(); // map size constant, so recompute only
+  }
 }
 
+
+void VolumetricData::invalidate_minmax() {
+  minmax_isvalid = false;
+  cached_min = 0;
+  cached_max = 0;
+}
+
+
+void VolumetricData::datarange(float &min, float &max) {
+  if (!minmax_isvalid && !mean_isvalid) {
+    compute_minmaxmean(); // min/max/mean all need updating
+  } else if (!minmax_isvalid) {
+    compute_minmax(); // only min/max need updating
+  }
+  
+  min = cached_min; 
+  max = cached_max; 
+}
+
+
+void VolumetricData::compute_minmaxmean() {
+  cached_min = 0;
+  cached_max = 0;
+  cached_mean = 0;
+
+  long ndata = gridsize();
+  if (ndata > 0) {
+    // use fast 16-byte-aligned min/max/mean routine
+    minmaxmean_1fv_aligned(data, ndata, &cached_min, &cached_max, &cached_mean);
+  }
+
+  mean_isvalid = true;
+  minmax_isvalid = true;
+}
+
+
+void VolumetricData::compute_minmax() {
+  cached_min = 0;
+  cached_max = 0;
+
+  long ndata = gridsize();
+  if (ndata > 0) {
+    // use fast 16-byte-aligned min/max routine
+    minmax_1fv_aligned(data, ndata, &cached_min, &cached_max);
+  }
+
+  minmax_isvalid = true;
+}
+
+
+
+float VolumetricData::mean() {
+  if (!mean_isvalid && !minmax_isvalid) {
+    compute_minmaxmean(); // min/max/mean all need updating
+  } else if (!mean_isvalid) {
+    compute_mean(); // only mean requires updating
+  }
+
+  return cached_mean;
+}
+
+
+void VolumetricData::invalidate_mean() {
+  mean_isvalid = false;
+  cached_mean = 0;
+}
+
+
+float VolumetricData::sigma() {
+  if (!sigma_isvalid)
+    compute_sigma();
+
+  return cached_sigma;
+}
+
+
+void VolumetricData::invalidate_sigma() {
+  sigma_isvalid = false;
+  cached_sigma = 0;
+}
+
+
+void VolumetricData::compute_mean() {
+  double mean=0.0;
+  long sz = gridsize();
+
+  // XXX This is a slow and lazy implementation that
+  //     loses precision if we get large magnitude
+  //     values early-on. 
+  //     If there is a single NaN value amidst the data
+  //     the returned mean will be a NaN.  
+  for (long i=0; i<sz; i++) 
+    mean += data[i];
+  mean /= sz;
+  cached_mean = mean;
+
+  mean_isvalid = true;
+}
+
+
+void VolumetricData::compute_sigma() {
+  double sigma = 0.0;
+  long sz = gridsize();
+  float mymean = mean();
+
+  // XXX This is a slow and lazy implementation that
+  //     loses precision if we get large magnitude
+  //     values early-on. 
+  //     If there is a single NaN value amidst the data
+  //     the returned mean will be a NaN.  
+  for (long i=0; i<sz; i++) {
+    float delta = data[i] - mymean;
+    sigma += delta*delta;
+  }
+
+  sigma /= sz;
+  sigma = sqrt(sigma);
+  cached_sigma = sigma;
+
+  sigma_isvalid = true;
+}
 
 

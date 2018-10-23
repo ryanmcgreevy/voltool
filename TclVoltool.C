@@ -2037,7 +2037,7 @@ int density_binmask(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *i
     return TCL_ERROR;
   }
 
-  volmapA->binmask(); 
+  volmapA->binmask(0.0); 
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
   if (outputmap != NULL) {

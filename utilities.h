@@ -11,7 +11,7 @@
  *
  *	$RCSfile: utilities.h,v $
  *	$Author: johns $	$Locker:  $		$State: Exp $
- *	$Revision: 1.109 $	$Date: 2018/09/07 19:01:58 $
+ *	$Revision: 1.110 $	$Date: 2018/10/11 20:13:47 $
  *
  ***************************************************************************
  * DESCRIPTION:
@@ -103,6 +103,10 @@ extern int find_last_selection_aligned(int n, const int *on, int *lastsel);
 // return 0 on success, return -1 if no selection
 extern int analyze_selection_aligned(int n, const int *on,
                                      int *firstsel, int *lastsel, int *selected);
+
+/// find min/max/mean values for an array of floats
+extern void minmaxmean_1fv_aligned(const float *f, long n, 
+                                   float *fmin, float *fmax, float *fmean);
 
 /// find min/max values for an array of floats
 extern void minmax_1fv_aligned(const float *f, long n, float *min, float *max);
