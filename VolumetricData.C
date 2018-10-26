@@ -998,7 +998,7 @@ void VolumetricData::mdff_potential(double threshold) {
   for (long i=0; i<gridsize(); i++) {
     // clamp the voxel values themselves
     if (data[i] < threshold) data[i] = threshold;
-    //scaleby -1 and 
+    //scaleby -1
     data[i] = data[i]*-1;
     //rescale voxel value range between 0 and 1
     data[i] = vrangeratio*(data[i] - threshinvert);
@@ -1012,9 +1012,7 @@ void VolumetricData::mdff_potential(double threshold) {
   invalidate_sigma();    // sigma will be computed on next request
 
   // force regeneration of volume gradient to match scaled voxels
-  if (gradient) {
-    compute_volume_gradient(); // map size constant, so recompute only
-  }
+  invalidate_gradient();
 }
 
 

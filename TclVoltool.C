@@ -1959,7 +1959,7 @@ int density_mdff_potential(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_In
       "    options:  -i <input map> specifies new density filename to load.\n"
       "              -mol <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
-      "              -o <filename> write density to file.\n",
+      "              -o <filename> write potential to file.\n",
       TCL_STATIC);
     return TCL_ERROR;
   }
@@ -3036,6 +3036,7 @@ int obj_voltool(ClientData cd, Tcl_Interp *interp, int argc,
       "sigma        -- transform map to sigma scale\n"
       "binmask      -- make a binary mask of the map\n"
       "smooth       -- 3D gaussian blur\n"
+      "pot          -- convert a density map to an MDFF potential\n"  
       "operations on two maps:\n"
       "add          -- add two maps together\n"
       "diff         -- subtract map2 from map1\n"
