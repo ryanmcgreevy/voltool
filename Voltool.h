@@ -24,6 +24,7 @@
 
 #include <stdio.h>
 #include "VolumetricData.h"
+#include "VMDApp.h"
 #include <stdint.h>
 #define MIN(X,Y) (((X)<(Y))? (X) : (Y))
 #define MAX(X,Y) (((X)>(Y))? (X) : (Y))
@@ -154,5 +155,10 @@ void init_from_union(VolumetricData *mapA, const VolumetricData *mapB, Volumetri
 /// create a new VolumetricData object from the intersection of two datasets
 void init_from_intersection(VolumetricData *mapA, const VolumetricData *mapB, VolumetricData *newvol);
 
+/// create a new empty volume
+VolumetricData * init_new_volume();
+
+/// create a new VMD molecule with VolumetricData 
+void init_new_volume_molecule(VMDApp *app, VolumetricData *newvol, const char *name);
 #endif
 

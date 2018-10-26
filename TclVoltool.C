@@ -1952,6 +1952,111 @@ int density_sigma(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *int
 
 }
 
+int density_mdff_potential(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
+  if (argc < 3) {
+    Tcl_SetResult(interp, (char *) "usage: voltool "
+      "pot -threshold <x> clamp density to minimum value of x. [options]\n"
+      "    options:  -i <input map> specifies new density filename to load.\n"
+      "              -mol <molid> specifies an already loaded density's molid for use as target\n"
+      "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
+      "              -o <filename> write density to file.\n",
+      TCL_STATIC);
+    return TCL_ERROR;
+  }
+
+
+  int molid = -1;
+  int volid = 0;
+  double threshold = 0;
+  const char *input_map = NULL;
+  const char *outputmap = NULL;
+  MoleculeList *mlist = app->moleculeList;
+  
+  for (int i=0; i < argc; i++) {
+    char *opt = Tcl_GetStringFromObj(objv[i], NULL);
+    if (!strcmp(opt, "-i")) {
+      if (i == argc-1) {
+        Tcl_AppendResult(interp, "No input map specified",NULL);
+        return TCL_ERROR;
+      }
+
+      FileSpec spec;
+      spec.waitfor = FileSpec::WAIT_BACK; // shouldn't this be waiting for all?
+      input_map = Tcl_GetStringFromObj(objv[1+i], NULL);
+      molid = app->molecule_new(input_map,0,1);
+      int ret_val = app->molecule_load(molid, input_map,app->guess_filetype(input_map),&spec);
+      if (ret_val < 0) return TCL_ERROR;
+    }
+
+
+    if (!strcmp(opt, "-mol")) {
+      if (i == argc-1) {
+        Tcl_AppendResult(interp, "No molid specified",NULL);
+        return TCL_ERROR;
+      } else if ( Tcl_GetIntFromObj(interp, objv[i+1], &molid) != TCL_OK) {
+        Tcl_AppendResult(interp, "\n molid incorrectly specified",NULL);
+        return TCL_ERROR;
+      }
+    }
+
+    if (!strcmp(opt, "-vol")) {
+      if (i == argc-1){
+        Tcl_AppendResult(interp, "No volume id specified",NULL);
+        return TCL_ERROR;
+      } else if ( Tcl_GetIntFromObj(interp, objv[i+1], &volid) != TCL_OK) {
+        Tcl_AppendResult(interp, "\n volume id incorrectly specified",NULL);
+        return TCL_ERROR;
+      }
+    }
+    
+    if (!strcmp(opt, "-threshold")) {
+      if (i == argc-1){
+        Tcl_AppendResult(interp, "No scaling amount specified",NULL);
+        return TCL_ERROR;
+      } else if ( Tcl_GetDoubleFromObj(interp, objv[i+1], &threshold) != TCL_OK) {
+        Tcl_AppendResult(interp, "\n scaling amount incorrectly specified",NULL);
+        return TCL_ERROR;
+      }
+    }
+    
+    if (!strcmp(opt, "-o")) {
+      if (i == argc-1) {
+        Tcl_AppendResult(interp, "No output file specified",NULL);
+        return TCL_ERROR;
+      } else {
+        outputmap = Tcl_GetStringFromObj(objv[i+1], NULL);
+      }
+    }
+  }
+  Molecule *volmol = NULL;
+  VolumetricData *volmapA = NULL;
+  if (molid > -1) {
+    volmol = mlist->mol_from_id(molid);
+    if (volmol == NULL) {
+      Tcl_AppendResult(interp, "\n invalid molecule specified",NULL);
+      return TCL_ERROR;
+    }
+
+    if (volmapA == NULL) 
+      volmapA = volmol->modify_volume_data(volid);
+  } else {
+    Tcl_AppendResult(interp, "\n no target volume specified",NULL);
+    return TCL_ERROR;
+  }
+  if (volmapA == NULL) {
+    Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
+    return TCL_ERROR;
+  }
+  volmapA->mdff_potential(threshold); 
+  volmol->force_recalc(DrawMolItem::MOL_REGEN);
+  
+  if (outputmap != NULL) {
+    volmap_write_dx_file(volmapA, outputmap);
+  }
+  return TCL_OK;
+
+}
+
 int density_binmask(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
   if (argc < 3) {
     Tcl_SetResult(interp, (char *) "usage: voltool "
@@ -2222,17 +2327,9 @@ int density_add(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inter
     return TCL_ERROR;
   }
   
-  double origin[3] = {0., 0., 0.};
-  double xaxis[3] = {0., 0., 0.};
-  double yaxis[3] = {0., 0., 0.};
-  double zaxis[3] = {0., 0., 0.};
-  int numvoxels [3] = {0, 0, 0};
-  float *data = NULL;
-  VolumetricData *newvol  = new VolumetricData("density map", origin, xaxis, yaxis, zaxis,
-                                 numvoxels[0], numvoxels[1], numvoxels[2],
-                                 data);
-
+  VolumetricData *newvol = init_new_volume();
   add(volmapA, volmapB, newvol, USE_INTERP, USE_UNION);
+  init_new_volume_molecule(app, newvol, "add_map");
 
   if (outputmap != NULL) {
     volmap_write_dx_file(newvol, outputmap);
@@ -2402,17 +2499,9 @@ int density_subtract(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *
     return TCL_ERROR;
   }
   
-  double origin[3] = {0., 0., 0.};
-  double xaxis[3] = {0., 0., 0.};
-  double yaxis[3] = {0., 0., 0.};
-  double zaxis[3] = {0., 0., 0.};
-  int numvoxels [3] = {0, 0, 0};
-  float *data = NULL;
-  VolumetricData *newvol  = new VolumetricData("density map", origin, xaxis, yaxis, zaxis,
-                                 numvoxels[0], numvoxels[1], numvoxels[2],
-                                 data);
-
+  VolumetricData *newvol = init_new_volume();
   subtract(volmapA, volmapB, newvol, USE_INTERP, USE_UNION);
+  init_new_volume_molecule(app, newvol, "diff_map");
 
   if (outputmap != NULL) {
     volmap_write_dx_file(newvol, outputmap);
@@ -2582,17 +2671,9 @@ int density_multiply(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *
     return TCL_ERROR;
   }
   
-  double origin[3] = {0., 0., 0.};
-  double xaxis[3] = {0., 0., 0.};
-  double yaxis[3] = {0., 0., 0.};
-  double zaxis[3] = {0., 0., 0.};
-  int numvoxels [3] = {0, 0, 0};
-  float *data = NULL;
-  VolumetricData *newvol  = new VolumetricData("density map", origin, xaxis, yaxis, zaxis,
-                                 numvoxels[0], numvoxels[1], numvoxels[2],
-                                 data);
-
+  VolumetricData *newvol = init_new_volume();
   multiply(volmapA, volmapB, newvol, USE_INTERP, USE_UNION);
+  init_new_volume_molecule(app, newvol, "mult_map");
 
   if (outputmap != NULL) {
     volmap_write_dx_file(newvol, outputmap);
@@ -2762,18 +2843,9 @@ int density_average(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *i
     return TCL_ERROR;
   }
   
-  double origin[3] = {0., 0., 0.};
-  double xaxis[3] = {0., 0., 0.};
-  double yaxis[3] = {0., 0., 0.};
-  double zaxis[3] = {0., 0., 0.};
-  int numvoxels [3] = {0, 0, 0};
-  float *data = NULL;
-  VolumetricData *newvol  = new VolumetricData("density map", origin, xaxis, yaxis, zaxis,
-                                 numvoxels[0], numvoxels[1], numvoxels[2],
-                                 data);
-
+  VolumetricData *newvol = init_new_volume();
   average(volmapA, volmapB, newvol, USE_INTERP, USE_UNION);
-
+  init_new_volume_molecule(app, newvol, "avg_map");
   if (outputmap != NULL) {
     volmap_write_dx_file(newvol, outputmap);
   }
@@ -3021,6 +3093,8 @@ int obj_voltool(ClientData cd, Tcl_Interp *interp, int argc,
     return density_average(app, argc-1, objv+1, interp);
   if (!strupncmp(argv1, "correlate", CMDLEN))
     return density_correlate(app, argc-1, objv+1, interp);
+  if (!strupncmp(argv1, "pot", CMDLEN))
+    return density_mdff_potential(app, argc-1, objv+1, interp);
 
   Tcl_SetResult(interp, (char *) "Type 'voltool' for summary of usage\n", TCL_VOLATILE);
   return TCL_OK;

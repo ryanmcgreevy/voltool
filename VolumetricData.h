@@ -11,7 +11,7 @@
  *
  *	$RCSfile: VolumetricData.h,v $
  *	$Author: johns $	$Locker:  $		$State: Exp $
- *	$Revision: 1.43 $	$Date: 2018/10/22 18:47:51 $
+ *	$Revision: 1.44 $	$Date: 2018/10/26 18:15:34 $
  *
  ***************************************************************************
  * DESCRIPTION:
@@ -34,9 +34,8 @@ public:
   char *name;              ///< human-readable volume dataset identifier
   float *data;             ///< raw data, total of xsize*ysize*zsize voxels
                            ///< stored x varying fastest, then y, then z.
-  float *gradient;         ///< negated normalized volume gradient map
 
-  /// constructor
+  /// constructors for both single- and double-precision axes
   VolumetricData(const char *name, const float *origin, 
                  const float *xaxis, const float *yaxis, const float *zaxis,
                  int xs, int ys, int zs, float *dataptr);
@@ -99,11 +98,16 @@ public:
   float voxel_value_from_coord_safe(float xpos, float ypos, float zpos) const;
   float voxel_value_interpolate_from_coord_safe(float xpos, float ypos, float zpos) const;
 
-  /// (re)compute the volume gradient
-  void compute_volume_gradient(void);
+
+  /// get read-only access to the gradient
+  const float *access_volume_gradient();
 
   /// provide the volume gradient
   void set_volume_gradient(float *gradient);
+
+  /// (re)compute the volume gradient
+  void compute_volume_gradient(void);
+
 
   /// return gradient at requested index, no safety checks
   void voxel_gradient_fast(int x, int y, int z, float *grad) const {
@@ -190,37 +194,35 @@ public:
   
   /// Guassian blur by sigma
   void gaussian_blur(double sigma);
+  
+  /// Create a potential for use with MDFF
+  void mdff_potential(double threshold);
 
 private:
-  bool minmax_isvalid;       ///< cached min/max values are current/valid
-  float cached_min;          ///< cached min voxel values
-  float cached_max;          ///< cached max voxel values 
+  float *gradient;            ///< negated normalized volume gradient map
+  bool gradient_isvalid;      ///< gradient map is current/valid
+  void invalidate_gradient(); ///< invalidate the cached min/max value
 
-  bool mean_isvalid;         ///< cached mean value is current/valid
-  float cached_mean;         ///< cached mean value
+  bool minmax_isvalid;        ///< cached min/max values are current/valid
+  float cached_min;           ///< cached min voxel values
+  float cached_max;           ///< cached max voxel values 
 
-  bool sigma_isvalid;        ///< cached sigma value is current/valid
-  float cached_sigma;        ///< cached sigma value
+  bool mean_isvalid;          ///< cached mean value is current/valid
+  float cached_mean;          ///< cached mean value
+ 
+  bool sigma_isvalid;         ///< cached sigma value is current/valid
+  float cached_sigma;         ///< cached sigma value
 
-  void compute_minmaxmean(); ///< compute min/max/mean, encache results
+  void compute_minmaxmean();  ///< compute min/max/mean, encache results
+  void invalidate_minmax();   ///< invalidate the cached min/max value
+  void compute_minmax();      ///< compute and encache min/max voxel values
 
-  /// invalidate the cached min/max value
-  void invalidate_minmax();
+  void invalidate_mean();     ///< invalidate the cached mean value
+  void compute_mean();        ///< compute and encache the mean voxel value
 
-  /// compute the min/max values of a map from the voxel data, encache result
-  void compute_minmax();
+  void invalidate_sigma();    ///< invalidate the cached sigma value
+  void compute_sigma();       ///< compute and encache sigma for voxel values
 
-  /// invalidate the cached mean value
-  void invalidate_mean();
-
-  /// compute the mean of a map from the voxel data, ecache result
-  void compute_mean();
-
-  /// invalidate the cached sigma value
-  void invalidate_sigma();
-
-  /// compute sigma for a map from the voxel data, encache the result
-  void compute_sigma();
 
   /// Cubic interpolation used by supersample
   inline float cubic_interp(float y0, float y1, float y2, float y3, float mu) const {
@@ -241,18 +243,18 @@ private:
 // 
 
 /// fast but unsafe macro for querying volume gradients
-#define VOXEL_GRADIENT_FAST_IDX(v, index, grad) \
-  { (grad)[0] = v->gradient[index    ]; \
-    (grad)[1] = v->gradient[index + 1]; \
-    (grad)[2] = v->gradient[index + 2]; \
+#define VOXEL_GRADIENT_FAST_IDX(gradientmap, index, newgrad) \
+  { (newgrad)[0] = (gradientmap)[index    ]; \
+    (newgrad)[1] = (gradientmap)[index + 1]; \
+    (newgrad)[2] = (gradientmap)[index + 2]; \
   }
 
 /// fast but unsafe macro for querying volume gradients
-#define VOXEL_GRADIENT_FAST(v, x, y, z, grad) \
-  { long index = ((z)*v->xsize*v->ysize + (y)*v->xsize + (x)) * 3; \
-    (grad)[0] = v->gradient[index    ]; \
-    (grad)[1] = v->gradient[index + 1]; \
-    (grad)[2] = v->gradient[index + 2]; \
+#define VOXEL_GRADIENT_FAST(gradientmap, planesz, rowsz, x, y, z, newgrad) \
+  { long index = ((z)*(planesz) + (y)*(rowsz) + (x)) * 3L; \
+    (newgrad)[0] = (gradientmap)[index    ]; \
+    (newgrad)[1] = (gradientmap)[index + 1]; \
+    (newgrad)[2] = (gradientmap)[index + 2]; \
   }
 
 #endif // VOLUMETRICDATA_H

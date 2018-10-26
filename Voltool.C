@@ -199,6 +199,31 @@ void init_from_union(VolumetricData *mapA, VolumetricData *mapB, VolumetricData 
   newvol->data = new float[newvol->gridsize()];
 }
 
+VolumetricData * init_new_volume(){
+  double origin[3] = {0., 0., 0.};
+  double xaxis[3] = {0., 0., 0.};
+  double yaxis[3] = {0., 0., 0.};
+  double zaxis[3] = {0., 0., 0.};
+  int numvoxels [3] = {0, 0, 0};
+  float *data = NULL;
+  VolumetricData *newvol  = new VolumetricData("density map", origin, xaxis, yaxis, zaxis,
+                                 numvoxels[0], numvoxels[1], numvoxels[2],
+                                 data);
+  return newvol; 
+}
+
+
+void init_new_volume_molecule(VMDApp *app, VolumetricData *newvol, const char *name){
+  int newvolmolid = app->molecule_new(name,0,1);
+  
+  app->molecule_add_volumetric(newvolmolid, "density newvol", newvol->origin, 
+                              newvol->xaxis, newvol->yaxis, newvol->zaxis, newvol->xsize, newvol->ysize, 
+                              newvol->zsize, newvol->data);
+  app->molecule_set_style("Isosurface");
+  app->molecule_addrep(newvolmolid);
+
+}
+
 // Pad each side of the volmap's grid with zeros. Negative padding results
 // in a trimming of the map
 void pad(VolumetricData *vol, int padxm, int padxp, int padym, int padyp, int padzm, int padzp) {

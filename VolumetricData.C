@@ -11,7 +11,7 @@
  *
  *	$RCSfile: VolumetricData.C,v $
  *	$Author: johns $	$Locker:  $		$State: Exp $
- *	$Revision: 1.55 $	$Date: 2018/10/22 18:47:51 $
+ *	$Revision: 1.56 $	$Date: 2018/10/26 18:15:34 $
  *
  ***************************************************************************
  * DESCRIPTION:
@@ -48,6 +48,7 @@ VolumetricData::VolumetricData(const char *dataname, const float *o,
   zsize = zs;
 
   gradient = NULL;
+  gradient_isvalid = false;
   invalidate_minmax();   // min/max will be computed on next request
   invalidate_mean();     // mean will be computed on first request
   invalidate_sigma();    // sigma will be computed on first request
@@ -75,6 +76,7 @@ VolumetricData::VolumetricData(const char *dataname, const double *o,
   zsize = zs;
 
   gradient = NULL;
+  gradient_isvalid = false;
   invalidate_minmax();   // min/max will be computed on next request
   invalidate_mean();     // mean will be computed on first request
   invalidate_sigma();    // sigma will be computed on first request
@@ -355,11 +357,29 @@ float VolumetricData::voxel_value_interpolate_from_coord_safe(float xpos, float 
 }
 
 
+void VolumetricData::invalidate_gradient() {
+  if (gradient) {
+    delete [] gradient; 
+    gradient = NULL;
+    gradient_isvalid = false;
+  }
+}
+
+
+const float * VolumetricData::access_volume_gradient() {
+  if ((gradient == NULL) || (!gradient_isvalid)) {
+    compute_volume_gradient();  
+  }
+  return gradient;
+}
+
+
 /// set the volume gradient
 void VolumetricData::set_volume_gradient(float *grad) {
   if (gradient) {
     delete [] gradient; 
     gradient = NULL;
+    gradient_isvalid = false;
   }
 
   if (!gradient) {
@@ -367,6 +387,8 @@ void VolumetricData::set_volume_gradient(float *grad) {
     gradient = new float[gsz];
     memcpy(gradient, grad, gsz*sizeof(float));
   }
+
+  gradient_isvalid = true;
 }
 
 
@@ -430,6 +452,8 @@ printf("gradient map sz: %ld, MB: %ld\n", gsz, gsz*sizeof(float)/(1024*1024));
       }
     }
   }
+
+  gradient_isvalid = true;
 }
 
 
@@ -583,11 +607,7 @@ void VolumetricData::pad(int padxm, int padxp, int padym, int padyp, int padzm, 
   // force complete destruction, deallocation, allocation, and 
   // recomputation of the gradient since the actual map dimensions
   // have changed and no longer match the old gradient
-  if (gradient) {
-    delete [] gradient;
-    gradient = NULL;
-    compute_volume_gradient();
-  }
+  invalidate_gradient();
 }
 
 
@@ -631,9 +651,7 @@ void VolumetricData::clamp(float min_value, float max_value) {
   invalidate_sigma();    // sigma will be computed on next request
 
   // force regeneration of volume gradient to match clamped voxels
-  if (gradient) {
-    compute_volume_gradient(); // map size constant, so recompute only
-  }
+  invalidate_gradient();
 }
 
 
@@ -650,9 +668,7 @@ void VolumetricData::scale_by(float ff) {
   invalidate_sigma();    // sigma will be computed on next request
 
   // force regeneration of volume gradient to match scaled voxels
-  if (gradient) {
-    compute_volume_gradient(); // map size constant, so recompute only
-  }
+  invalidate_gradient();
 }
 
 
@@ -689,9 +705,7 @@ void VolumetricData::rescale_voxel_value_range(float min_val, float max_val) {
   invalidate_sigma();    // sigma will be computed on next request
 
   // force regeneration of volume gradient to match scaled voxels
-  if (gradient) {
-    compute_volume_gradient(); // map size constant, so recompute only
-  }
+  invalidate_gradient();
 }
 
 
@@ -746,11 +760,7 @@ void VolumetricData::downsample() {
   invalidate_sigma();    // sigma will be computed on next request
 
   // force regeneration of volume gradient to match resampled voxels
-  if (gradient) {
-    delete [] gradient;
-    gradient = NULL;
-    compute_volume_gradient();
-  }
+  invalidate_gradient();
 }
 
 
@@ -913,11 +923,7 @@ void VolumetricData::supersample() {
   invalidate_sigma();    // sigma will be computed on next request
 
   // force regeneration of volume gradient to match resampled voxels
-  if (gradient) {
-    delete [] gradient;
-    gradient = NULL;
-    compute_volume_gradient();
-  }
+  invalidate_gradient();
 }
 
 
@@ -938,9 +944,7 @@ void VolumetricData::sigma_scale() {
   invalidate_sigma();    // sigma will be computed on next request
 
   // force regeneration of volume gradient to match rescaled voxels
-  if (gradient) {
-    compute_volume_gradient(); // map size constant, so recompute only
-  }
+  invalidate_gradient();
 }
 
 
@@ -956,9 +960,7 @@ void VolumetricData::binmask(float threshold) {
   invalidate_sigma();    // sigma will be computed on next request
 
   // force regeneration of volume gradient to match masked voxels
-  if (gradient) {
-    compute_volume_gradient(); // map size constant, so recompute only
-  }
+  invalidate_gradient();
 }
 
 
@@ -986,6 +988,30 @@ void VolumetricData::gaussian_blur(double sigma) {
   invalidate_sigma();    // sigma will be computed on next request
 
   // force regeneration of volume gradient to match blurred voxels
+  invalidate_gradient();
+}
+
+void VolumetricData::mdff_potential(double threshold) {
+  float threshinvert = threshold*-1;
+  float oldvrange = (cached_max*-1) - threshinvert;
+  float vrangeratio = 1 / oldvrange;
+  for (long i=0; i<gridsize(); i++) {
+    // clamp the voxel values themselves
+    if (data[i] < threshold) data[i] = threshold;
+    //scaleby -1 and 
+    data[i] = data[i]*-1;
+    //rescale voxel value range between 0 and 1
+    data[i] = vrangeratio*(data[i] - threshinvert);
+  }
+  
+  // update min/max as a result of the rescaling operation
+  cached_min = 0;
+  cached_max = 1;
+
+  invalidate_mean();     // mean will be computed on next request
+  invalidate_sigma();    // sigma will be computed on next request
+
+  // force regeneration of volume gradient to match scaled voxels
   if (gradient) {
     compute_volume_gradient(); // map size constant, so recompute only
   }
