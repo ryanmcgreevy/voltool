@@ -10,8 +10,8 @@
  * RCS INFORMATION:
  *
  *	$RCSfile: VolumetricData.h,v $
- *	$Author: johns $	$Locker:  $		$State: Exp $
- *	$Revision: 1.44 $	$Date: 2018/10/26 18:15:34 $
+ *	$Author: ryanmcgreevy $	$Locker:  $		$State: Exp $
+ *	$Revision: 1.45 $	$Date: 2018/11/02 21:27:29 $
  *
  ***************************************************************************
  * DESCRIPTION:
@@ -129,31 +129,27 @@ public:
 
   /// get the cartesian coordinate of a voxel given its x,y,z indices
   inline void voxel_coord(int x, int y, int z, 
-                          float &gx, float &gy, float &gz, 
-                          VolumetricData *vol) const {
+                          float &gx, float &gy, float &gz) const {
     float xdelta[3], ydelta[3], zdelta[3];
-    vol->cell_axes(xdelta, ydelta, zdelta);
+    cell_axes(xdelta, ydelta, zdelta);
     
-    gx = vol->origin[0] + (x * xdelta[0]) + (y * ydelta[0]) + (z * zdelta[0]);
-    gy = vol->origin[1] + (x * xdelta[1]) + (y * ydelta[1]) + (z * zdelta[1]);
-    gz = vol->origin[2] + (x * xdelta[2]) + (y * ydelta[2]) + (z * zdelta[2]);
+    gx = origin[0] + (x * xdelta[0]) + (y * ydelta[0]) + (z * zdelta[0]);
+    gy = origin[1] + (x * xdelta[1]) + (y * ydelta[1]) + (z * zdelta[1]);
+    gz = origin[2] + (x * xdelta[2]) + (y * ydelta[2]) + (z * zdelta[2]);
   }
 
   /// get the cartesian coordinate of a voxel given its 1-D index 
-  inline void voxel_coord(long i, float &x, float &y, float &z, 
-                          VolumetricData *vol) const {
+  inline void voxel_coord(long i, float &x, float &y, float &z) const {
     float xdelta[3], ydelta[3], zdelta[3];
-    vol->cell_axes(xdelta, ydelta, zdelta);
-    long xsize = vol->xsize;
-    long ysize = vol->ysize;
+    cell_axes(xdelta, ydelta, zdelta);
     
     long gz = i / (ysize*xsize);
     long gy = (i / xsize) % ysize;
     long gx = i % xsize;
 
-    x = vol->origin[0] + (gx * xdelta[0]) + (gy * ydelta[0]) + (gz * zdelta[0]);
-    y = vol->origin[1] + (gx * xdelta[1]) + (gy * ydelta[1]) + (gz * zdelta[1]);
-    z = vol->origin[2] + (gx * xdelta[2]) + (gy * ydelta[2]) + (gz * zdelta[2]);
+    x = origin[0] + (gx * xdelta[0]) + (gy * ydelta[0]) + (gz * zdelta[0]);
+    y = origin[1] + (gx * xdelta[1]) + (gy * ydelta[1]) + (gz * zdelta[1]);
+    z = origin[2] + (gx * xdelta[2]) + (gy * ydelta[2]) + (gz * zdelta[2]);
   }
 
   //

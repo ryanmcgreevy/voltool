@@ -10,8 +10,8 @@
  * RCS INFORMATION:
  *
  *      $RCSfile: TclVoltool.C,v $
- *      $Author: johns $        $Locker:  $             $State: Exp $
- *      $Revision: 1.1 $      $Date: 2018/09/12 15:37:28 $
+ *      $Author: ryanmcgreevy $        $Locker:  $             $State: Exp $
+ *      $Revision: 1.2 $      $Date: 2018/11/02 21:26:24 $
  *
  ***************************************************************************
  * DESCRIPTION:
@@ -513,7 +513,7 @@ int density_move(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inte
 int density_moveto(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
   if (argc < 3) {
     Tcl_SetResult(interp, (char *) "usage: voltool "
-      "moveto -pos <x,y,z> coordinates to move com to> [options]\n"
+      "moveto -pos {x y z} coordinates to move com to> [options]\n"
       "    options:  -i <input map> specifies new density filename to load.\n"
       "              -mol <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
@@ -1657,6 +1657,7 @@ int density_range(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *int
     Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
     return TCL_ERROR;
   }
+  
   volmapA->rescale_voxel_value_range(minmax[0], minmax[1]); 
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
@@ -1955,8 +1956,9 @@ int density_sigma(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *int
 int density_mdff_potential(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
   if (argc < 3) {
     Tcl_SetResult(interp, (char *) "usage: voltool "
-      "pot -threshold <x> clamp density to minimum value of x. [options]\n"
-      "    options:  -i <input map> specifies new density filename to load.\n"
+      "pot [options]\n"
+      "    options:  -threshold <x> clamp density to minimum value of x.\n"
+      "              -i <input map> specifies new density filename to load.\n"
       "              -mol <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
       "              -o <filename> write potential to file.\n",
@@ -2061,7 +2063,7 @@ int density_binmask(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *i
   if (argc < 3) {
     Tcl_SetResult(interp, (char *) "usage: voltool "
       "binmask [options]\n"
-      "    options:  -threshold <thresold value> set values above threshold to 1. Defaults to 0."
+      "    options:  -threshold <thresold value> set values above threshold to 1. Defaults to 0.\n"
       "              -i <input map> specifies new density filename to load.\n"
       "              -mol <molid> specifies an already loaded density's molid for use as target\n"
       "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"

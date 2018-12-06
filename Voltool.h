@@ -10,8 +10,8 @@
  * RCS INFORMATION:
  *
  *      $RCSfile: Voltool.h,v $
- *      $Author: johns $        $Locker:  $             $State: Exp $
- *      $Revision: 1.3 $      $Date: 2018/09/17 21:17:52 $
+ *      $Author: ryanmcgreevy $        $Locker:  $             $State: Exp $
+ *      $Revision: 1.4 $      $Date: 2018/11/02 21:22:41 $
  *
  ***************************************************************************
  * DESCRIPTION:

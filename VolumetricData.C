@@ -10,8 +10,8 @@
  * RCS INFORMATION:
  *
  *	$RCSfile: VolumetricData.C,v $
- *	$Author: johns $	$Locker:  $		$State: Exp $
- *	$Revision: 1.56 $	$Date: 2018/10/26 18:15:34 $
+ *	$Author: ryanmcgreevy $	$Locker:  $		$State: Exp $
+ *	$Revision: 1.59 $	$Date: 2018/11/02 21:27:29 $
  *
  ***************************************************************************
  * DESCRIPTION:
@@ -60,7 +60,6 @@ VolumetricData::VolumetricData(const char *dataname, const float *o,
     zaxis[i] = (double)za[i];
   } 
 
-  const long ndata = long(xsize)*long(ysize)*long(zsize);
   compute_minmax();
 }
 
@@ -88,7 +87,6 @@ VolumetricData::VolumetricData(const char *dataname, const double *o,
     zaxis[i] = za[i];
   } 
 
-  const long ndata = long(xsize)*long(ysize)*long(zsize);
   compute_minmax();
 }
 
@@ -661,8 +659,15 @@ void VolumetricData::scale_by(float ff) {
   }
 
   // update min/max as a result of the value scaling operation
-  cached_min *= ff;
-  cached_max *= ff;
+  if (ff >= 0.0) {
+    cached_min *= ff;
+    cached_max *= ff;
+  } else {
+    // max/min are swapped when negative scale factors are applied
+    float tmp = cached_min;
+    cached_min = cached_max * ff;
+    cached_max = tmp * ff;
+  }
 
   invalidate_mean();     // mean will be computed on next request
   invalidate_sigma();    // sigma will be computed on next request
@@ -992,8 +997,12 @@ void VolumetricData::gaussian_blur(double sigma) {
 }
 
 void VolumetricData::mdff_potential(double threshold) {
+  //calculate new max
   float threshinvert = threshold*-1;
-  float oldvrange = (cached_max*-1) - threshinvert;
+  //calculate new min
+  float mininvert = (cached_max*-1);
+  //range of the thresholded and inverted (scaleby -1) data
+  float oldvrange = threshinvert - mininvert;
   float vrangeratio = 1 / oldvrange;
   for (long i=0; i<gridsize(); i++) {
     // clamp the voxel values themselves
@@ -1001,7 +1010,7 @@ void VolumetricData::mdff_potential(double threshold) {
     //scaleby -1
     data[i] = data[i]*-1;
     //rescale voxel value range between 0 and 1
-    data[i] = vrangeratio*(data[i] - threshinvert);
+    data[i] = vrangeratio*(data[i] - mininvert);
   }
   
   // update min/max as a result of the rescaling operation

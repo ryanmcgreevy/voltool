@@ -10,8 +10,8 @@
  * RCS INFORMATION:
  *
  *      $RCSfile: Voltool.C,v $
- *      $Author: johns $        $Locker:  $             $State: Exp $
- *      $Revision: 1.1 $      $Date: 2018/09/12 14:06:40 $
+ *      $Author: ryanmcgreevy $        $Locker:  $             $State: Exp $
+ *      $Revision: 1.2 $      $Date: 2018/11/02 21:22:41 $
  *
  ***************************************************************************
  * DESCRIPTION:
@@ -283,13 +283,8 @@ void vol_com(VolumetricData *vol, float *com){
   double mass = 0.0;
 
   for (int i = 0; i < vol->gridsize(); i++) {
-//for (int z = 0; z < vol->zsize; z++)
-//  for (int y = 0; y < vol->ysize; y++)
-//    for (int x = 0; x < vol->xsize; x++){
     float m = vol->data[i];
-    voxel_coord(i, ix, iy, iz, vol);
-   // float m = vol->voxel_value(x, y, z);
-   // voxel_coord(x,y,z,ix,iy,iz,vol); 
+    vol->voxel_coord(i, ix, iy, iz);
     float coord[3] = {ix,iy,iz};    
     mass = mass+m;
     vec_scale(coord, m, coord);
@@ -782,7 +777,7 @@ void add(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvol, bo
   }
   for (long i=0; i<newvol->gridsize(); i++){
     float x, y, z;
-    voxel_coord(i, x, y, z, newvol);
+    newvol->voxel_coord(i, x, y, z);
 
     if (interp) newvol->data[i] = \
       mapA->voxel_value_interpolate_from_coord_safe(x,y,z) + \
@@ -809,7 +804,7 @@ void subtract(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvo
   }
   for (long i=0; i<newvol->gridsize(); i++){
     float x, y, z;
-    voxel_coord(i, x, y, z, newvol);
+    newvol->voxel_coord(i, x, y, z);
 
     if (interp) newvol->data[i] = \
       mapA->voxel_value_interpolate_from_coord_safe(x,y,z) - \
@@ -833,7 +828,7 @@ void multiply(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvo
     for (long i=0; i<newvol->gridsize(); i++){
       float x, y, z;
       float voxelA, voxelB;
-      voxel_coord(i, x, y, z, newvol);
+      newvol->voxel_coord(i, x, y, z);
       if (interp) {
         voxelA = mapA->voxel_value_interpolate_from_coord(x,y,z);
         voxelB = mapB->voxel_value_interpolate_from_coord(x,y,z);
@@ -857,7 +852,7 @@ void multiply(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvo
     
     for (long i=0; i<newvol->gridsize(); i++){
       float x, y, z;
-      voxel_coord(i, x, y, z, newvol);
+      newvol->voxel_coord(i, x, y, z);
 
       if (interp) newvol->data[i] = \
         mapA->voxel_value_interpolate_from_coord(x,y,z) * \
@@ -885,7 +880,7 @@ void average(VolumetricData *mapA, VolumetricData  *mapB, VolumetricData *newvol
   }
   for (long i=0; i<newvol->gridsize(); i++){
     float x, y, z;
-    voxel_coord(i, x, y, z, newvol);
+    newvol->voxel_coord(i, x, y, z);
 
     if (interp) newvol->data[i] = \
       (mapA->voxel_value_interpolate_from_coord_safe(x,y,z) + \
