@@ -2059,6 +2059,105 @@ int density_mdff_potential(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_In
 
 }
 
+int density_histogram(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
+  if (argc < 3) {
+    Tcl_SetResult(interp, (char *) "usage: voltool "
+      "hist [options]\n"
+      "    options:  -nbins <x> number of histogram bins. Defaults to 10.\n"
+      "              -i <input map> specifies new density filename to load.\n"
+      "              -mol <molid> specifies an already loaded density's molid for use as target\n"
+      "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n",
+      TCL_STATIC);
+    return TCL_ERROR;
+  }
+
+
+  int molid = -1;
+  int volid = 0;
+  int nbins = 10;
+  const char *input_map = NULL;
+  MoleculeList *mlist = app->moleculeList;
+  
+  for (int i=0; i < argc; i++) {
+    char *opt = Tcl_GetStringFromObj(objv[i], NULL);
+    if (!strcmp(opt, "-i")) {
+      if (i == argc-1) {
+        Tcl_AppendResult(interp, "No input map specified",NULL);
+        return TCL_ERROR;
+      }
+
+      FileSpec spec;
+      spec.waitfor = FileSpec::WAIT_BACK; // shouldn't this be waiting for all?
+      input_map = Tcl_GetStringFromObj(objv[1+i], NULL);
+      molid = app->molecule_new(input_map,0,1);
+      int ret_val = app->molecule_load(molid, input_map,app->guess_filetype(input_map),&spec);
+      if (ret_val < 0) return TCL_ERROR;
+    }
+
+
+    if (!strcmp(opt, "-mol")) {
+      if (i == argc-1) {
+        Tcl_AppendResult(interp, "No molid specified",NULL);
+        return TCL_ERROR;
+      } else if ( Tcl_GetIntFromObj(interp, objv[i+1], &molid) != TCL_OK) {
+        Tcl_AppendResult(interp, "\n molid incorrectly specified",NULL);
+        return TCL_ERROR;
+      }
+    }
+
+    if (!strcmp(opt, "-vol")) {
+      if (i == argc-1){
+        Tcl_AppendResult(interp, "No volume id specified",NULL);
+        return TCL_ERROR;
+      } else if ( Tcl_GetIntFromObj(interp, objv[i+1], &volid) != TCL_OK) {
+        Tcl_AppendResult(interp, "\n volume id incorrectly specified",NULL);
+        return TCL_ERROR;
+      }
+    }
+    
+    if (!strcmp(opt, "-nbins")) {
+      if (i == argc-1){
+        Tcl_AppendResult(interp, "No number of bins specified",NULL);
+        return TCL_ERROR;
+      } else if ( Tcl_GetIntFromObj(interp, objv[i+1], &nbins) != TCL_OK) {
+        Tcl_AppendResult(interp, "\n number of bins incorrectly specified",NULL);
+        return TCL_ERROR;
+      }
+    }
+    
+  }
+  Molecule *volmol = NULL;
+  VolumetricData *volmapA = NULL;
+  if (molid > -1) {
+    volmol = mlist->mol_from_id(molid);
+    if (volmol == NULL) {
+      Tcl_AppendResult(interp, "\n invalid molecule specified",NULL);
+      return TCL_ERROR;
+    }
+
+    if (volmapA == NULL) 
+      volmapA = volmol->modify_volume_data(volid);
+  } else {
+    Tcl_AppendResult(interp, "\n no target volume specified",NULL);
+    return TCL_ERROR;
+  }
+  if (volmapA == NULL) {
+    Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
+    return TCL_ERROR;
+  }
+  
+  int *bins = histogram(volmapA, nbins); 
+  // convert the results of the lowlevel call to tcl lists
+  // and build a list from them as return value.
+  Tcl_Obj *tcl_result = Tcl_NewListObj(0, NULL);
+  for (int j=0; j <= nbins; j++) {
+      Tcl_ListObjAppendElement(interp, tcl_result, Tcl_NewIntObj(bins[j]));
+  }
+  Tcl_SetObjResult(interp, tcl_result);
+  free(bins);
+  return TCL_OK;
+
+}
 int density_binmask(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
   if (argc < 3) {
     Tcl_SetResult(interp, (char *) "usage: voltool "
@@ -3039,6 +3138,7 @@ int obj_voltool(ClientData cd, Tcl_Interp *interp, int argc,
       "binmask      -- make a binary mask of the map\n"
       "smooth       -- 3D gaussian blur\n"
       "pot          -- convert a density map to an MDFF potential\n"  
+      "hist         -- calculate a histogram of the density map\n"  
       "operations on two maps:\n"
       "add          -- add two maps together\n"
       "diff         -- subtract map2 from map1\n"
@@ -3098,6 +3198,8 @@ int obj_voltool(ClientData cd, Tcl_Interp *interp, int argc,
     return density_correlate(app, argc-1, objv+1, interp);
   if (!strupncmp(argv1, "pot", CMDLEN))
     return density_mdff_potential(app, argc-1, objv+1, interp);
+  if (!strupncmp(argv1, "hist", CMDLEN))
+    return density_histogram(app, argc-1, objv+1, interp);
 
   Tcl_SetResult(interp, (char *) "Type 'voltool' for summary of usage\n", TCL_VOLATILE);
   return TCL_OK;

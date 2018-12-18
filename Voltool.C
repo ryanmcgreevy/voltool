@@ -11,7 +11,7 @@
  *
  *      $RCSfile: Voltool.C,v $
  *      $Author: ryanmcgreevy $        $Locker:  $             $State: Exp $
- *      $Revision: 1.2 $      $Date: 2018/11/02 21:22:41 $
+ *      $Revision: 1.3 $      $Date: 2018/12/06 15:23:27 $
  *
  ***************************************************************************
  * DESCRIPTION:
@@ -950,6 +950,34 @@ void vol_move(VolumetricData *vol,  float *mat){
     vol->yaxis[i] = npointy[i];
     vol->zaxis[i] = npointz[i];
   }
+
+}
+
+// Calculates a density histogram
+int *histogram(VolumetricData *vol, int nbins) {
+  // Calculate minmax
+  double min = vol->data[0];
+  double max = vol->data[0];
+
+  long i;
+  for (i=1; i<vol->gridsize(); i++) {
+    if (vol->data[i] < min) min = vol->data[i];
+    if (vol->data[i] > max) max = vol->data[i];
+  }
+
+  // Calculate the width of each bin
+  double binwidth = (max-min)/nbins;
+
+  // Allocate array that will contain the number of voxels in each bin
+  int *bins = (int*) malloc(nbins*sizeof(int));
+  memset(bins, 0, nbins*sizeof(int));
+
+  // Calculate histogram
+  for (i=0; i<vol->gridsize(); i++) 
+    bins[int((vol->data[i]-min)/binwidth)]++;
+
+  return bins;
+  //free(bins);
 
 }
 
