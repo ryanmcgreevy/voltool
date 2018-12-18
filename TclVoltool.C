@@ -2150,7 +2150,7 @@ int density_histogram(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp 
   // convert the results of the lowlevel call to tcl lists
   // and build a list from them as return value.
   Tcl_Obj *tcl_result = Tcl_NewListObj(0, NULL);
-  for (int j=0; j <= nbins; j++) {
+  for (int j=0; j < nbins; j++) {
       Tcl_ListObjAppendElement(interp, tcl_result, Tcl_NewIntObj(bins[j]));
   }
   Tcl_SetObjResult(interp, tcl_result);
