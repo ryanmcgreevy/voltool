@@ -1039,7 +1039,7 @@ int* VolumetricData::histogram(int nbins) {
   // Calculate histogram
   for (long i=0; i<gridsize(); i++) 
     bins[int((data[i]-min)/binwidth)]++;
-  printf("gridsize: %ld \n", gridsize());
+  
   return bins;
 }
 
