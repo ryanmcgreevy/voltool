@@ -1031,14 +1031,15 @@ int* VolumetricData::histogram(int nbins) {
   datarange(min, max);
   // Calculate the width of each bin
   double binwidth = (max-min)/nbins;
-
+  //precompute inverse
+  double binwidthinv = 1/binwidth;
   // Allocate array that will contain the number of voxels in each bin
   int *bins = (int*) malloc(nbins*sizeof(int));
   memset(bins, 0, nbins*sizeof(int));
 
   // Calculate histogram
   for (long i=0; i<gridsize(); i++) 
-    bins[int((data[i]-min)/binwidth)]++;
+    bins[int((data[i]-min)*binwidthinv)]++;
   
   return bins;
 }
