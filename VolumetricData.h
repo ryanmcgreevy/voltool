@@ -193,6 +193,9 @@ public:
   
   /// Create a potential for use with MDFF
   void mdff_potential(double threshold);
+  
+  /// Calculate histogram of map
+  int* histogram(int nbins);
 
 private:
   float *gradient;            ///< negated normalized volume gradient map

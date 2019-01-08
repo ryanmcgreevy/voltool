@@ -1024,6 +1024,24 @@ void VolumetricData::mdff_potential(double threshold) {
   invalidate_gradient();
 }
 
+// Calculates a histogram
+int* VolumetricData::histogram(int nbins) {
+  //get minmax values of map
+  float min, max;
+  datarange(min, max);
+  // Calculate the width of each bin
+  double binwidth = (max-min)/nbins;
+
+  // Allocate array that will contain the number of voxels in each bin
+  int *bins = (int*) malloc(nbins*sizeof(int));
+  memset(bins, 0, nbins*sizeof(int));
+
+  // Calculate histogram
+  for (long i=0; i<gridsize(); i++) 
+    bins[int((data[i]-min)/binwidth)]++;
+  printf("gridsize: %ld \n", gridsize());
+  return bins;
+}
 
 void VolumetricData::invalidate_minmax() {
   minmax_isvalid = false;
