@@ -193,7 +193,7 @@ public:
   
   /// Create a potential for use with MDFF
   void mdff_potential(double threshold);
-  
+
 private:
   float *gradient;            ///< negated normalized volume gradient map
   bool gradient_isvalid;      ///< gradient map is current/valid

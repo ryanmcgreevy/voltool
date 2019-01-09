@@ -1024,6 +1024,7 @@ void VolumetricData::mdff_potential(double threshold) {
   invalidate_gradient();
 }
 
+
 void VolumetricData::invalidate_minmax() {
   minmax_isvalid = false;
   cached_min = 0;
