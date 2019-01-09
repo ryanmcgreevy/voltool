@@ -2148,7 +2148,7 @@ int density_histogram(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp 
   
   int *bins = new int[nbins]; 
   float *midpts = new float[nbins]; 
-  volmapA->histogram(nbins, bins, midpts); 
+  histogram(volmapA, nbins, bins, midpts); 
   
   // convert the results of the lowlevel call to tcl lists
   // and build a list from them as return value.

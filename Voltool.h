@@ -160,6 +160,11 @@ VolumetricData * init_new_volume();
 
 /// create a new VMD molecule with VolumetricData 
 void init_new_volume_molecule(VMDApp *app, VolumetricData *newvol, const char *name);
+  
+/// Calculate histogram of map. bins and midpts are return
+/// arrays for the counts and midpoints of the bins, respectively
+/// and must be the size of nbins.
+void histogram( VolumetricData *vol, int nbins, int *bins, float *midpts);
 
 #endif
 
