@@ -1025,7 +1025,7 @@ void VolumetricData::mdff_potential(double threshold) {
 }
 
 // Calculates a histogram
-int* VolumetricData::histogram(int nbins) {
+void VolumetricData::histogram(int nbins, int *bins, float *midpts) {
   //get minmax values of map
   float min, max;
   datarange(min, max);
@@ -1034,14 +1034,17 @@ int* VolumetricData::histogram(int nbins) {
   //precompute inverse
   double binwidthinv = 1/binwidth;
   // Allocate array that will contain the number of voxels in each bin
-  int *bins = (int*) malloc(nbins*sizeof(int));
+  //int *bins = (int*) malloc(nbins*sizeof(int));
   memset(bins, 0, nbins*sizeof(int));
 
   // Calculate histogram
   for (long i=0; i<gridsize(); i++) 
     bins[int((data[i]-min)*binwidthinv)]++;
   
-  return bins;
+  for (int j = 0; j < nbins; j++)
+      midpts[j] = min + (0.5*binwidth) + (j*binwidth);
+
+ // return bins;
 }
 
 void VolumetricData::invalidate_minmax() {
