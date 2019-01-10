@@ -11,7 +11,7 @@
  *
  *      $RCSfile: Voltool.h,v $
  *      $Author: ryanmcgreevy $        $Locker:  $             $State: Exp $
- *      $Revision: 1.4 $      $Date: 2018/11/02 21:22:41 $
+ *      $Revision: 1.5 $      $Date: 2019/01/09 22:17:30 $
  *
  ***************************************************************************
  * DESCRIPTION:
@@ -75,48 +75,6 @@ inline void voxel_coord(int i, float &x, float &y, float &z,
   y = vol->origin[1] + (gx * xdelta[1]) + (gy * ydelta[1]) + (gz * zdelta[1]);
   z = vol->origin[2] + (gx * xdelta[2]) + (gy * ydelta[2]) + (gz * zdelta[2]);
 }
-
-//
-//--unary ops--
-// 
-
-/// add or remove voxels in the given axis directions
-void pad(VolumetricData *vol, int padxm, int padxp, int padym, int padyp, int padzm, int padzp);
-
-/// crop a volumetric data to a given set of cartesian coordinates
-void crop(VolumetricData *vol, double crop_minx, double crop_miny, double crop_minz, double crop_maxx, double crop_maxy, double crop_maxz);
-
-/// clamp out of range voxel values
-void clamp(VolumetricData *vol, float min_value, float max_value);
-
-/// scales voxel data by given amount
-void scale_by(VolumetricData *vol, float ff);
-
-/// add scalar value to to all voxels
-void scalar_add(VolumetricData *vol, float ff);
-
-/// fit voxel data to a given range
-void fit_to_range(VolumetricData *vol, float min_value, float max_value);
-
-/// decimate/dowmnsample voxels by 2 in each dimension (x8 total reduction)
-void downsample(VolumetricData *vol);
-
-/// refine/supersample voxels by 2 in each dimension (x8 total increase)
-void supersample(VolumetricData *vol);
-
-/// Transform map to a sigma scale, so that isovalues in VMD correspond
-/// to number of sigmas above the mean
-void sigma_scale(VolumetricData *vol);
-
-/// Make a binary mask out of a map, i.e. all values > 0 are set to 1
-void binmask(VolumetricData *vol);
-
-/// Gaussian blurring (as a 3D convolution)
-void gauss3d(VolumetricData *vol, double sigma);
-
-/// Fast Gaussian blur that takes advantage of the fact that the 
-/// dimensions are separable.
-void gauss1d(VolumetricData *vol, double sigma);
 
 //
 //--binary ops--
