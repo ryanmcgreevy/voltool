@@ -1,6 +1,6 @@
 /***************************************************************************
  *cr                                                                       
- *cr            (C) Copyright 1995-2016 The Board of Trustees of the           
+ *cr            (C) Copyright 1995-2019 The Board of Trustees of the           
  *cr                        University of Illinois                       
  *cr                         All Rights Reserved                        
  *cr                                                                   
@@ -10,8 +10,8 @@
  * RCS INFORMATION:
  *
  *	$RCSfile: VolumetricData.C,v $
- *	$Author: ryanmcgreevy $	$Locker:  $		$State: Exp $
- *	$Revision: 1.59 $	$Date: 2018/11/02 21:27:29 $
+ *	$Author: johns $	$Locker:  $		$State: Exp $
+ *	$Revision: 1.60 $	$Date: 2019/01/17 21:21:02 $
  *
  ***************************************************************************
  * DESCRIPTION:

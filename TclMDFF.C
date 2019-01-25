@@ -1,6 +1,6 @@
 /***************************************************************************
  *cr
- *cr            (C) Copyright 2007-2011 The Board of Trustees of the
+ *cr            (C) Copyright 1995-2019 The Board of Trustees of the
  *cr                        University of Illinois
  *cr                         All Rights Reserved
  *cr
@@ -11,7 +11,7 @@
  *
  *      $RCSfile: TclMDFF.C,v $
  *      $Author: johns $        $Locker:  $             $State: Exp $
- *      $Revision: 1.28 $      $Date: 2018/09/12 14:06:40 $
+ *      $Revision: 1.29 $      $Date: 2019/01/17 21:38:55 $
  *
  ***************************************************************************
  * DESCRIPTION:

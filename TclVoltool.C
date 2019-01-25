@@ -880,6 +880,149 @@ int fit(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
   return TCL_OK;
 }
 
+int mask(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
+  if (argc < 3) {
+    Tcl_SetResult(interp, (char *) "usage: voltool "
+      "mask <selection> [options]\n"
+      "    options:  -res <resolution of map in A> (Default: 5) \n"
+      "              -cutoff <cutoff mask distance in A> (Default: 5) \n"
+      "              -i <input map> specifies new target density filename to load.\n"
+      "              -mol <molid> specifies an already loaded density's molid for use as target\n"
+      "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
+      "              -o <filename> write density to file.\n",
+      TCL_STATIC);
+    return TCL_ERROR;
+  }
+
+  //atom selection
+  AtomSel *sel = NULL;
+  sel = tcl_commands_get_sel(interp, Tcl_GetStringFromObj(objv[1],NULL));
+  if (!sel) {
+    Tcl_AppendResult(interp, "volmap: no atom selection.", NULL);
+    return TCL_ERROR;
+  }
+  if (!sel->selected) {
+    Tcl_AppendResult(interp, "volmap: no atoms selected.", NULL);
+    return TCL_ERROR;
+  }
+  if (!app->molecule_valid_id(sel->molid())) {
+    Tcl_AppendResult(interp, "invalide mol id.", NULL);
+    return TCL_ERROR;
+  }
+
+  int molid = -1;
+  int volid = 0;
+  double resolution = 5;
+  double cutoff = 5;
+  const char *input_map = NULL;
+  const char *outputmap = NULL;
+  MoleculeList *mlist = app->moleculeList;
+  
+  //parse arguments
+  for (int i=0; i < argc; i++) {
+    char *opt = Tcl_GetStringFromObj(objv[i], NULL);
+    if (!strcmp(opt, "-i")) {
+      if (i == argc-1) {
+        Tcl_AppendResult(interp, "No input map specified",NULL);
+        return TCL_ERROR;
+      }
+
+      FileSpec spec;
+      spec.waitfor = FileSpec::WAIT_BACK; // shouldn't this be waiting for all?
+      input_map = Tcl_GetStringFromObj(objv[1+i], NULL);
+      molid = app->molecule_new(input_map,0,1);
+      int ret_val = app->molecule_load(molid, input_map,app->guess_filetype(input_map),&spec);
+      if (ret_val < 0) return TCL_ERROR;
+    }
+
+    if (!strcmp(opt, "-res")) {
+      if (i == argc-1){
+        Tcl_AppendResult(interp, "No resolution specified",NULL);
+        return TCL_ERROR;
+      } else if (Tcl_GetDoubleFromObj(interp, objv[i+1], &resolution) != TCL_OK){ 
+        Tcl_AppendResult(interp, "\n resolution incorrectly specified",NULL);
+        return TCL_ERROR;
+      }
+    }
+    
+    if (!strcmp(opt, "-cutoff")) {
+      if (i == argc-1){
+        Tcl_AppendResult(interp, "No cutoff specified",NULL);
+        return TCL_ERROR;
+      } else if (Tcl_GetDoubleFromObj(interp, objv[i+1], &cutoff) != TCL_OK){ 
+        Tcl_AppendResult(interp, "\n cutoff incorrectly specified",NULL);
+        return TCL_ERROR;
+      }
+    }
+
+
+    if (!strcmp(opt, "-mol")) {
+      if (i == argc-1) {
+        Tcl_AppendResult(interp, "No molid specified",NULL);
+        return TCL_ERROR;
+      } else if ( Tcl_GetIntFromObj(interp, objv[i+1], &molid) != TCL_OK) {
+        Tcl_AppendResult(interp, "\n molid incorrectly specified",NULL);
+        return TCL_ERROR;
+      }
+    }
+
+    if (!strcmp(opt, "-vol")) {
+      if (i == argc-1){
+        Tcl_AppendResult(interp, "No volume id specified",NULL);
+        return TCL_ERROR;
+      } else if ( Tcl_GetIntFromObj(interp, objv[i+1], &volid) != TCL_OK) {
+        Tcl_AppendResult(interp, "\n volume id incorrectly specified",NULL);
+        return TCL_ERROR;
+      }
+    }
+    
+    if (!strcmp(opt, "-o")) {
+      if (i == argc-1) {
+        Tcl_AppendResult(interp, "No output file specified",NULL);
+        return TCL_ERROR;
+      } else {
+        outputmap = Tcl_GetStringFromObj(objv[i+1], NULL);
+      }
+    }
+  }
+
+  VolumetricData *volmapA = NULL;
+  if (molid > -1) {
+    Molecule *volmol = mlist->mol_from_id(molid);
+    if (volmol == NULL) {
+      Tcl_AppendResult(interp, "\n invalid molecule specified",NULL);
+      return TCL_ERROR;
+    }
+
+    if (volmapA == NULL) 
+      volmapA = volmol->modify_volume_data(volid);
+  } else {
+    Tcl_AppendResult(interp, "\n no target volume specified",NULL);
+    return TCL_ERROR;
+  }
+  if (volmapA == NULL) {
+    Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
+    return TCL_ERROR;
+  }
+  
+  
+  VolMapCreate *volcreate = new VolMapCreateMask(app, sel, (float)resolution, (float)cutoff);
+  volcreate->compute_all(0, VolMapCreate::COMBINE_AVG, NULL);
+  VolumetricData *mask = volcreate->volmap;
+  VolumetricData *newvol = init_new_volume();
+  bool USE_UNION = false;
+  bool USE_INTERP = true;
+  multiply(volmapA, mask, newvol, USE_INTERP, USE_UNION);
+  
+  init_new_volume_molecule(app, newvol, "masked_map");
+
+  if (outputmap != NULL) {
+    volmap_write_dx_file(newvol, outputmap);
+  }
+   
+  return TCL_OK;
+}
+
 int density_trim(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
   if (argc < 3) {
     Tcl_SetResult(interp, (char *) "usage: voltool "
@@ -3270,6 +3413,7 @@ int obj_voltool(ClientData cd, Tcl_Interp *interp, int argc,
       "fit          -- rigid body fitting\n"
       "cc           -- calculates the cross-correlation coefficient between a map and structure\n"
       "sim          -- creates a simulated map from an atomic structure\n"
+      "mask         -- masks a map around an atomic structure\n"
       "operations on one map:\n"
       "com          -- get center of mass of density\n"
       "moveto       -- move density com to a specified coordinate\n"
@@ -3351,6 +3495,8 @@ int obj_voltool(ClientData cd, Tcl_Interp *interp, int argc,
     return density_histogram(app, argc-1, objv+1, interp);
   if (!strupncmp(argv1, "info", CMDLEN))
     return density_info(app, argc-1, objv+1, interp);
+  if (!strupncmp(argv1, "mask", CMDLEN))
+    return mask(app, argc-1, objv+1, interp);
 
   Tcl_SetResult(interp, (char *) "Type 'voltool' for summary of usage\n", TCL_VOLATILE);
   return TCL_OK;

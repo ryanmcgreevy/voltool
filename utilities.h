@@ -1,6 +1,6 @@
 /***************************************************************************
  *cr                                                                       
- *cr            (C) Copyright 1995-2016 The Board of Trustees of the           
+ *cr            (C) Copyright 1995-2019 The Board of Trustees of the           
  *cr                        University of Illinois                       
  *cr                         All Rights Reserved                        
  *cr                                                                   
@@ -11,7 +11,7 @@
  *
  *	$RCSfile: utilities.h,v $
  *	$Author: johns $	$Locker:  $		$State: Exp $
- *	$Revision: 1.110 $	$Date: 2018/10/11 20:13:47 $
+ *	$Revision: 1.111 $	$Date: 2019/01/17 21:21:03 $
  *
  ***************************************************************************
  * DESCRIPTION:

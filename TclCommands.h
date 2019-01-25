@@ -1,6 +1,6 @@
 /***************************************************************************
  *cr                                                                       
- *cr            (C) Copyright 1995-2016 The Board of Trustees of the           
+ *cr            (C) Copyright 1995-2019 The Board of Trustees of the           
  *cr                        University of Illinois                       
  *cr                         All Rights Reserved                        
  *cr                                                                   
@@ -11,7 +11,7 @@
  *
  *	$RCSfile: TclCommands.h,v $
  *	$Author: johns $	$Locker:  $		$State: Exp $
- *	$Revision: 1.54 $	$Date: 2018/09/12 14:06:40 $
+ *	$Revision: 1.56 $	$Date: 2019/01/23 21:33:54 $
  *
  ***************************************************************************
  * DESCRIPTION:
@@ -78,6 +78,21 @@ int tcl_get_matrix(const char *fctn, Tcl_Interp *interp,
 /// functions.
 int tcl_get_weights(Tcl_Interp *interp, VMDApp *app, AtomSel *sel, 
                     Tcl_Obj *weight_obj, float *data);
+
+/// Assign weights of 1 to all atoms in the selection, and zero otherwise
+int atomsel_default_weights(AtomSel *sel, float *weights);
+
+/// Obtain weights from a Tcl list
+int get_weights_from_tcl_list(Tcl_Interp *interp, VMDApp *app, AtomSel *sel,
+                              Tcl_Obj *weights_obj, float *weights);
+
+/// Get the index of the given keyword in the VMD namespace (avoid having to
+/// include SymbolTable.h)
+int get_attribute_index(VMDApp *app, char const *string);
+
+/// Obtain weights from the requested attribute
+int get_weights_from_attribute(VMDApp *app, AtomSel *sel,
+                               char const *weights_string, float *weights);
 
 // Get a vector from a string
 int tcl_get_vector(const char *s, float *val, Tcl_Interp *interp);

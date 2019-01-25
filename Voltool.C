@@ -1,6 +1,6 @@
 /***************************************************************************
  *cr
- *cr            (C) Copyright 2007-2011 The Board of Trustees of the
+ *cr            (C) Copyright 1995-2019 The Board of Trustees of the
  *cr                        University of Illinois
  *cr                         All Rights Reserved
  *cr
@@ -10,8 +10,8 @@
  * RCS INFORMATION:
  *
  *      $RCSfile: Voltool.C,v $
- *      $Author: ryanmcgreevy $        $Locker:  $             $State: Exp $
- *      $Revision: 1.4 $      $Date: 2019/01/09 22:17:30 $
+ *      $Author: johns $        $Locker:  $             $State: Exp $
+ *      $Revision: 1.6 $      $Date: 2019/01/17 21:38:55 $
  *
  ***************************************************************************
  * DESCRIPTION:
