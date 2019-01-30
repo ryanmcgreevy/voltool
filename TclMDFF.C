@@ -38,7 +38,7 @@
 #include <tcl.h>
 #include "TclCommands.h"
 #include "TclMDFF.h"
-
+#include "Voltool.h"
 
 
 int mdff_sim(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
@@ -46,8 +46,9 @@ int mdff_sim(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) 
   if (argc < 3) {
      // "     options: --allframes (average over all frames)\n"
     Tcl_SetResult(interp, (char *) "usage: voltool "
-      "sim: <selection> -o <output map> [options]\n"
+      "sim: <selection> [options]\n"
 //      "              --weight (weight density with atomic numbers)\n"
+      "              -o <output map> \n"
       "              -res <target resolution in Angstroms> (default 10.0)\n"
       "              -spacing <grid spacing in Angstroms> (default based on resolution)\n",
       TCL_STATIC);
@@ -141,8 +142,8 @@ int mdff_sim(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) 
   VolumetricData *synthvol=NULL;
   if (getenv("VMDNOCUDA") == NULL) {
     cuda_err = vmd_cuda_calc_density(sel, app->moleculeList, quality, radscale, gspacing, &synthvol, NULL, NULL, verbose);
-    volmap_write_dx_file(synthvol, outputmap);
-    delete synthvol;
+    init_new_volume_molecule(app, synthvol, "sim_map");
+    if (outputmap != NULL) volmap_write_dx_file(synthvol, outputmap);
   }
 #endif
 
@@ -154,12 +155,11 @@ int mdff_sim(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) 
     VolumetricData *volmap = NULL;
     volmap = qs->calc_density_map(sel, mymol, framepos, radii,
                                   quality, (float)radscale, (float)gspacing);
-    volmap_write_dx_file(volmap, outputmap);
-    delete volmap;
+    init_new_volume_molecule(app, volmap, "sim_map");
+    if (outputmap != NULL) volmap_write_dx_file(volmap, outputmap);
     delete qs;
   }
 
-  printf("Done with simple MDFF density test...\n");
   return TCL_OK;
 }
 
