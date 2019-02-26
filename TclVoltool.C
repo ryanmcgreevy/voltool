@@ -32,6 +32,8 @@
 #include "MoleculeList.h"
 #include "VolumetricData.h"
 #include "VolMapCreate.h" // volmap_write_dx_file()
+#include "PluginMgr.h"
+#include "MolFilePlugin.h"
 
 #include "CUDAMDFF.h"
 #include "MDFF.h"
@@ -3403,6 +3405,123 @@ int density_correlate(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp 
   return TCL_OK;
 }
 
+int density_save(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
+  if (argc < 3) {
+    Tcl_SetResult(interp, (char *) "usage: voltool "
+      "write [options]\n"
+      "    options:  -i <input map> specifies new density filename to load.\n"
+      "              -mol <molid> specifies an already loaded density's molid for use as target\n"
+      "              -vol <volume id> specifies an already loaded density's volume id for use as target. Defaults to 0.\n"
+      "              -o <filename> write density to file.\n",
+      TCL_STATIC);
+    return TCL_ERROR;
+  }
+
+
+  int molid = -1;
+  int volid = 0;
+  const char *input_map = NULL;
+  const char *outputmap = NULL;
+  MoleculeList *mlist = app->moleculeList;
+  
+  for (int i=0; i < argc; i++) {
+    char *opt = Tcl_GetStringFromObj(objv[i], NULL);
+    if (!strcmp(opt, "-i")) {
+      if (i == argc-1) {
+        Tcl_AppendResult(interp, "No input map specified",NULL);
+        return TCL_ERROR;
+      }
+
+      FileSpec spec;
+      spec.waitfor = FileSpec::WAIT_BACK; // shouldn't this be waiting for all?
+      input_map = Tcl_GetStringFromObj(objv[1+i], NULL);
+      molid = app->molecule_new(input_map,0,1);
+      int ret_val = app->molecule_load(molid, input_map,app->guess_filetype(input_map),&spec);
+      if (ret_val < 0) return TCL_ERROR;
+    }
+
+
+    if (!strcmp(opt, "-mol")) {
+      if (i == argc-1) {
+        Tcl_AppendResult(interp, "No molid specified",NULL);
+        return TCL_ERROR;
+      } else if ( Tcl_GetIntFromObj(interp, objv[i+1], &molid) != TCL_OK) {
+        Tcl_AppendResult(interp, "\n molid incorrectly specified",NULL);
+        return TCL_ERROR;
+      }
+    }
+
+    if (!strcmp(opt, "-vol")) {
+      if (i == argc-1){
+        Tcl_AppendResult(interp, "No volume id specified",NULL);
+        return TCL_ERROR;
+      } else if ( Tcl_GetIntFromObj(interp, objv[i+1], &volid) != TCL_OK) {
+        Tcl_AppendResult(interp, "\n volume id incorrectly specified",NULL);
+        return TCL_ERROR;
+      }
+    }
+    
+    if (!strcmp(opt, "-o")) {
+      if (i == argc-1) {
+        Tcl_AppendResult(interp, "No output file specified",NULL);
+        return TCL_ERROR;
+      } else {
+        outputmap = Tcl_GetStringFromObj(objv[i+1], NULL);
+      }
+    }
+  }
+  Molecule *volmol = NULL;
+  VolumetricData *volmapA = NULL;
+  if (molid > -1) {
+    volmol = mlist->mol_from_id(molid);
+    if (volmol == NULL) {
+      Tcl_AppendResult(interp, "\n invalid molecule specified",NULL);
+      return TCL_ERROR;
+    }
+
+    if (volmapA == NULL) 
+      volmapA = volmol->modify_volume_data(volid);
+  } else {
+    Tcl_AppendResult(interp, "\n no target volume specified",NULL);
+    return TCL_ERROR;
+  }
+  if (volmapA == NULL) {
+    Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
+    return TCL_ERROR;
+  }
+
+  vmdplugin_t *p = app->get_plugin("mol file reader", "dx");
+  
+  if (!p) {
+    p = app->get_plugin("mol file converter", "dx");
+  }
+  
+  MolFilePlugin *plugin = NULL;
+  
+  if (p) {
+    plugin = new MolFilePlugin(p);
+  }
+  
+  if (plugin != NULL){
+    int natom = 0;
+    int filehandler = plugin->init_write(outputmap, natom);
+    if (filehandler == MOLFILE_ERROR) {
+      Tcl_AppendResult(interp, "\n Unable to write output file. Exiting...", NULL);
+      return TCL_ERROR;
+    }
+    
+    plugin->write_volumetric(volmol, volid);
+  }
+  
+
+  //old non-molfile way of writing output
+/*  if (outputmap != NULL) {
+    volmap_write_dx_file(volmapA, outputmap);
+  }
+  */
+  return TCL_OK;
+}
+
 int obj_voltool(ClientData cd, Tcl_Interp *interp, int argc,
                             Tcl_Obj * const objv[]){
   if (argc < 2) {
@@ -3415,6 +3534,7 @@ int obj_voltool(ClientData cd, Tcl_Interp *interp, int argc,
       "sim          -- creates a simulated map from an atomic structure\n"
       "mask         -- masks a map around an atomic structure\n"
       "operations on one map:\n"
+      "write        -- write volumetric data to a file\n"
       "com          -- get center of mass of density\n"
       "moveto       -- move density com to a specified coordinate\n"
       "move         -- apply specified 4x4 transformation matrix to density\n"
@@ -3497,6 +3617,8 @@ int obj_voltool(ClientData cd, Tcl_Interp *interp, int argc,
     return density_info(app, argc-1, objv+1, interp);
   if (!strupncmp(argv1, "mask", CMDLEN))
     return mask(app, argc-1, objv+1, interp);
+  if (!strupncmp(argv1, "write", CMDLEN))
+    return density_save(app, argc-1, objv+1, interp);
 
   Tcl_SetResult(interp, (char *) "Type 'voltool' for summary of usage\n", TCL_VOLATILE);
   return TCL_OK;
