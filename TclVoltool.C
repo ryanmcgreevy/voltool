@@ -318,6 +318,45 @@ void reset_origin(float *origin, float *newpos, AtomSel *sel) {
 }
 
 
+int write_file(VMDApp *app, Molecule *volmol, int volid, const char* filename) {
+  
+  /* Get the extension */
+  // XXX - casting to avoid a compilation error on SOLARIS. 
+  // char* ext = strrchr(filename, '.');
+  char* ext = (char *)strrchr(filename, '.');
+//  if (!ext) {
+//    fprintf(stderr, "Couldn't find an extension in the filename '%s'\n", filename);
+//    return NULL;
+//  }
+
+  ext = &ext[1];
+  
+  vmdplugin_t *p = app->get_plugin("mol file reader", ext);
+  
+  if (!p) {
+    p = app->get_plugin("mol file converter", ext);
+  }
+  
+  MolFilePlugin *plugin = NULL;
+  
+  if (p) {
+    plugin = new MolFilePlugin(p);
+  }
+  
+  if (plugin != NULL){
+    int natom = 0;
+    int filehandler = plugin->init_write(filename, natom);
+    if (filehandler == MOLFILE_ERROR) {
+      return 0;
+    }
+    
+    plugin->write_volumetric(volmol, volid);
+  }
+  
+  return 1;
+
+}
+
 int density_com(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
   if (argc < 3) {
     Tcl_SetResult(interp, (char *) "usage: voltool "
@@ -3490,35 +3529,13 @@ int density_save(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inte
     return TCL_ERROR;
   }
 
-  vmdplugin_t *p = app->get_plugin("mol file reader", "dx");
-  
-  if (!p) {
-    p = app->get_plugin("mol file converter", "dx");
-  }
-  
-  MolFilePlugin *plugin = NULL;
-  
-  if (p) {
-    plugin = new MolFilePlugin(p);
-  }
-  
-  if (plugin != NULL){
-    int natom = 0;
-    int filehandler = plugin->init_write(outputmap, natom);
-    if (filehandler == MOLFILE_ERROR) {
-      Tcl_AppendResult(interp, "\n Unable to write output file. Exiting...", NULL);
-      return TCL_ERROR;
-    }
-    
-    plugin->write_volumetric(volmol, volid);
-  }
-  
 
+  if (outputmap != NULL) {
+    write_file(app, volmol, volid, outputmap);
   //old non-molfile way of writing output
-/*  if (outputmap != NULL) {
-    volmap_write_dx_file(volmapA, outputmap);
+  //  volmap_write_dx_file(volmapA, outputmap);
   }
-  */
+  
   return TCL_OK;
 }
 
