@@ -117,7 +117,7 @@ void init_from_intersection(VolumetricData *mapA, const VolumetricData *mapB, Vo
 VolumetricData * init_new_volume();
 
 /// create a new VMD molecule with VolumetricData 
-void init_new_volume_molecule(VMDApp *app, VolumetricData *newvol, const char *name);
+int init_new_volume_molecule(VMDApp *app, VolumetricData *newvol, const char *name);
   
 /// Calculate histogram of map. bins and midpts are return
 /// arrays for the counts and midpoints of the bins, respectively

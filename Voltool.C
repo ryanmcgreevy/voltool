@@ -213,7 +213,7 @@ VolumetricData * init_new_volume(){
 }
 
 
-void init_new_volume_molecule(VMDApp *app, VolumetricData *newvol, const char *name){
+int init_new_volume_molecule(VMDApp *app, VolumetricData *newvol, const char *name){
   int newvolmolid = app->molecule_new(name,0,1);
   
   app->molecule_add_volumetric(newvolmolid, "density newvol", newvol->origin, 
@@ -221,7 +221,8 @@ void init_new_volume_molecule(VMDApp *app, VolumetricData *newvol, const char *n
                               newvol->zsize, newvol->data);
   app->molecule_set_style("Isosurface");
   app->molecule_addrep(newvolmolid);
-
+  
+  return newvolmolid;
 }
 
 

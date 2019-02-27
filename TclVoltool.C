@@ -31,7 +31,7 @@
 #include "VMDApp.h"
 #include "MoleculeList.h"
 #include "VolumetricData.h"
-#include "VolMapCreate.h" // volmap_write_dx_file()
+#include "VolMapCreate.h"
 #include "PluginMgr.h"
 #include "MolFilePlugin.h"
 
@@ -545,7 +545,10 @@ int density_move(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inte
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
 
   if (outputmap != NULL) {
-    volmap_write_dx_file(volmapA, outputmap);
+    if (!write_file(app, volmol, volid, outputmap)){
+      Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
+      return TCL_ERROR;
+    }
   }
   return TCL_OK;
 
@@ -664,7 +667,10 @@ int density_moveto(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *in
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
 
   if (outputmap != NULL) {
-    volmap_write_dx_file(volmapA, outputmap);
+    if (!write_file(app, volmol, volid, outputmap)){
+      Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
+      return TCL_ERROR;
+    }
   }
   return TCL_OK;
 
@@ -1055,10 +1061,14 @@ int mask(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *interp) {
   bool USE_INTERP = true;
   multiply(volmapA, mask, newvol, USE_INTERP, USE_UNION);
   
-  init_new_volume_molecule(app, newvol, "masked_map");
-
+  int newvolmolid = init_new_volume_molecule(app, newvol, "masked_map");
+  Molecule *newvolmol = mlist->mol_from_id(newvolmolid);
+  
   if (outputmap != NULL) {
-    volmap_write_dx_file(newvol, outputmap);
+    if (!write_file(app, newvolmol, 0, outputmap)){
+      Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
+      return TCL_ERROR;
+    }
   }
    
   return TCL_OK;
@@ -1176,7 +1186,10 @@ int density_trim(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inte
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
   if (outputmap != NULL) {
-    volmap_write_dx_file(volmapA, outputmap);
+    if (!write_file(app, volmol, volid, outputmap)){
+      Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
+      return TCL_ERROR;
+    }
   }
   return TCL_OK;
 
@@ -1294,7 +1307,10 @@ int density_crop(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inte
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
   if (outputmap != NULL) {
-    volmap_write_dx_file(volmapA, outputmap);
+    if (!write_file(app, volmol, volid, outputmap)){
+      Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
+      return TCL_ERROR;
+    }
   }
   return TCL_OK;
 
@@ -1412,7 +1428,10 @@ int density_clamp(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *int
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
   if (outputmap != NULL) {
-    volmap_write_dx_file(volmapA, outputmap);
+    if (!write_file(app, volmol, volid, outputmap)){
+      Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
+      return TCL_ERROR;
+    }
   }
   return TCL_OK;
 
@@ -1517,7 +1536,10 @@ int density_smult(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *int
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
   if (outputmap != NULL) {
-    volmap_write_dx_file(volmapA, outputmap);
+    if (!write_file(app, volmol, volid, outputmap)){
+      Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
+      return TCL_ERROR;
+    }
   }
   return TCL_OK;
 
@@ -1622,7 +1644,10 @@ int density_smooth(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *in
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
   if (outputmap != NULL) {
-    volmap_write_dx_file(volmapA, outputmap);
+    if (!write_file(app, volmol, volid, outputmap)){
+      Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
+      return TCL_ERROR;
+    }
   }
   return TCL_OK;
 
@@ -1727,7 +1752,10 @@ int density_sadd(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inte
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
   if (outputmap != NULL) {
-    volmap_write_dx_file(volmapA, outputmap);
+    if (!write_file(app, volmol, volid, outputmap)){
+      Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
+      return TCL_ERROR;
+    }
   }
   return TCL_OK;
 
@@ -1846,7 +1874,10 @@ int density_range(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *int
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
   if (outputmap != NULL) {
-    volmap_write_dx_file(volmapA, outputmap);
+    if (!write_file(app, volmol, volid, outputmap)){
+      Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
+      return TCL_ERROR;
+    }
   }
   return TCL_OK;
 
@@ -1941,7 +1972,10 @@ int density_downsample(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
   if (outputmap != NULL) {
-    volmap_write_dx_file(volmapA, outputmap);
+    if (!write_file(app, volmol, volid, outputmap)){
+      Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
+      return TCL_ERROR;
+    }
   }
   return TCL_OK;
 
@@ -2036,7 +2070,10 @@ int density_supersample(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Inter
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
   if (outputmap != NULL) {
-    volmap_write_dx_file(volmapA, outputmap);
+    if (!write_file(app, volmol, volid, outputmap)){
+      Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
+      return TCL_ERROR;
+    }
   }
   return TCL_OK;
 
@@ -2131,7 +2168,10 @@ int density_sigma(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *int
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
   if (outputmap != NULL) {
-    volmap_write_dx_file(volmapA, outputmap);
+    if (!write_file(app, volmol, volid, outputmap)){
+      Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
+      return TCL_ERROR;
+    }
   }
   return TCL_OK;
 
@@ -2237,7 +2277,10 @@ int density_mdff_potential(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_In
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
   if (outputmap != NULL) {
-    volmap_write_dx_file(volmapA, outputmap);
+    if (!write_file(app, volmol, volid, outputmap)){
+      Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
+      return TCL_ERROR;
+    }
   }
   return TCL_OK;
 
@@ -2593,7 +2636,10 @@ int density_binmask(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *i
   volmol->force_recalc(DrawMolItem::MOL_REGEN);
   
   if (outputmap != NULL) {
-    volmap_write_dx_file(volmapA, outputmap);
+    if (!write_file(app, volmol, volid, outputmap)){
+      Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
+      return TCL_ERROR;
+    }
   }
   return TCL_OK;
 
@@ -2762,10 +2808,14 @@ int density_add(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inter
   
   VolumetricData *newvol = init_new_volume();
   add(volmapA, volmapB, newvol, USE_INTERP, USE_UNION);
-  init_new_volume_molecule(app, newvol, "add_map");
+  int newvolmolid = init_new_volume_molecule(app, newvol, "add_map");
+  Molecule *newvolmol = mlist->mol_from_id(newvolmolid);
 
   if (outputmap != NULL) {
-    volmap_write_dx_file(newvol, outputmap);
+    if (!write_file(app, newvolmol, 0, outputmap)){
+      Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
+      return TCL_ERROR;
+    }
   }
   return TCL_OK;
 
@@ -2934,11 +2984,16 @@ int density_subtract(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *
   
   VolumetricData *newvol = init_new_volume();
   subtract(volmapA, volmapB, newvol, USE_INTERP, USE_UNION);
-  init_new_volume_molecule(app, newvol, "diff_map");
+  int newvolmolid = init_new_volume_molecule(app, newvol, "diff_map");
+  Molecule *newvolmol = mlist->mol_from_id(newvolmolid);
 
   if (outputmap != NULL) {
-    volmap_write_dx_file(newvol, outputmap);
+    if (!write_file(app, newvolmol, 0, outputmap)){
+      Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
+      return TCL_ERROR;
+    }
   }
+  
   return TCL_OK;
 
 }
@@ -3106,10 +3161,14 @@ int density_multiply(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *
   
   VolumetricData *newvol = init_new_volume();
   multiply(volmapA, volmapB, newvol, USE_INTERP, USE_UNION);
-  init_new_volume_molecule(app, newvol, "mult_map");
+  int newvolmolid = init_new_volume_molecule(app, newvol, "mult_map");
+  Molecule *newvolmol = mlist->mol_from_id(newvolmolid);
 
   if (outputmap != NULL) {
-    volmap_write_dx_file(newvol, outputmap);
+    if (!write_file(app, newvolmol, 0, outputmap)){
+      Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
+      return TCL_ERROR;
+    }
   }
   return TCL_OK;
 
@@ -3278,9 +3337,14 @@ int density_average(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *i
   
   VolumetricData *newvol = init_new_volume();
   average(volmapA, volmapB, newvol, USE_INTERP, USE_UNION);
-  init_new_volume_molecule(app, newvol, "avg_map");
+  int newvolmolid = init_new_volume_molecule(app, newvol, "avg_map");
+  Molecule *newvolmol = mlist->mol_from_id(newvolmolid);
+  
   if (outputmap != NULL) {
-    volmap_write_dx_file(newvol, outputmap);
+    if (!write_file(app, newvolmol, 0, outputmap)){
+      Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
+      return TCL_ERROR;
+    }
   }
   return TCL_OK;
 
@@ -3531,9 +3595,10 @@ int density_save(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp *inte
 
 
   if (outputmap != NULL) {
-    write_file(app, volmol, volid, outputmap);
-  //old non-molfile way of writing output
-  //  volmap_write_dx_file(volmapA, outputmap);
+    if (!write_file(app, volmol, volid, outputmap)){
+      Tcl_AppendResult(interp, "\n no target volume correctly specified",NULL);
+      return TCL_ERROR;
+    }
   }
   
   return TCL_OK;
