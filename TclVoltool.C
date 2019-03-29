@@ -11,7 +11,7 @@
  *
  *      $RCSfile: TclVoltool.C,v $
  *      $Author: ryanmcgreevy $        $Locker:  $             $State: Exp $
- *      $Revision: 1.4 $      $Date: 2019/01/25 20:27:47 $
+ *      $Revision: 1.5 $      $Date: 2019/02/27 17:31:34 $
  *
  ***************************************************************************
  * DESCRIPTION:
@@ -2373,7 +2373,7 @@ int density_histogram(VMDApp *app, int argc, Tcl_Obj * const objv[], Tcl_Interp 
     return TCL_ERROR;
   }
   
-  int *bins = new int[nbins]; 
+  long *bins = new long[nbins]; 
   float *midpts = new float[nbins]; 
   histogram(volmapA, nbins, bins, midpts); 
   

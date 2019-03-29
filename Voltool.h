@@ -10,8 +10,8 @@
  * RCS INFORMATION:
  *
  *      $RCSfile: Voltool.h,v $
- *      $Author: johns $        $Locker:  $             $State: Exp $
- *      $Revision: 1.7 $      $Date: 2019/01/17 21:38:55 $
+ *      $Author: ryanmcgreevy $        $Locker:  $             $State: Exp $
+ *      $Revision: 1.8 $      $Date: 2019/02/27 17:31:35 $
  *
  ***************************************************************************
  * DESCRIPTION:
@@ -122,7 +122,7 @@ int init_new_volume_molecule(VMDApp *app, VolumetricData *newvol, const char *na
 /// Calculate histogram of map. bins and midpts are return
 /// arrays for the counts and midpoints of the bins, respectively
 /// and must be the size of nbins.
-void histogram( VolumetricData *vol, int nbins, int *bins, float *midpts);
+void histogram( VolumetricData *vol, int nbins, long *bins, float *midpts);
 
 #endif
 

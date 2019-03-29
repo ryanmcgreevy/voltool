@@ -10,8 +10,8 @@
  * RCS INFORMATION:
  *
  *      $RCSfile: Voltool.C,v $
- *      $Author: johns $        $Locker:  $             $State: Exp $
- *      $Revision: 1.6 $      $Date: 2019/01/17 21:38:55 $
+ *      $Author: ryanmcgreevy $        $Locker:  $             $State: Exp $
+ *      $Revision: 1.7 $      $Date: 2019/02/27 17:31:34 $
  *
  ***************************************************************************
  * DESCRIPTION:
@@ -440,7 +440,7 @@ void vol_move(VolumetricData *vol,  float *mat){
 /// Calculate histogram of map. bins and midpts are return
 /// arrays for the counts and midpoints of the bins, respectively
 /// and must be the size of nbins.
-void histogram( VolumetricData *vol, int nbins, int *bins, float *midpts) {
+void histogram( VolumetricData *vol, int nbins, long *bins, float *midpts) {
   //get minmax values of map
   float min, max;
   vol->datarange(min, max);
@@ -450,11 +450,11 @@ void histogram( VolumetricData *vol, int nbins, int *bins, float *midpts) {
   double binwidthinv = 1/binwidth;
   // Allocate array that will contain the number of voxels in each bin
   //int *bins = (int*) malloc(nbins*sizeof(int));
-  memset(bins, 0, nbins*sizeof(int));
+  memset(bins, 0, nbins*sizeof(long));
 
   // Calculate histogram
   for (long i=0; i<vol->gridsize(); i++) 
-    bins[int((vol->data[i]-min)*binwidthinv)]++;
+    bins[long((vol->data[i]-min)*binwidthinv)]++;
   
   for (int j = 0; j < nbins; j++)
       midpts[j] = min + (0.5*binwidth) + (j*binwidth);
