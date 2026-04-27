@@ -1,3 +1,17 @@
+This was my personal git repository for the `voltool` plugin of [VMD](https://www.ks.uiuc.edu/Research/vmd/)
+while I worked for the Theoretical and Computational Biophysics Group at the University of Illinois Urbana-Champaign.
+`voltool` is a set of utility methods for manipulating the volumetric data (density maps) used by the `mdff` plugin of VMD.
+The molecular dynamics flexible fitting (MDFF) method can be used to flexibly fit atomic structures into density maps (usually Cryo-EM, or
+low-resolution X-ray crystallography for xMDFF). The method consists of adding external forces proportional to the gradient of the density map 
+into a molecular dynamics (MD) simulation of the atomic structure.
+
+This version of `voltool` represents a large overhaul of an older plugin to improve computational efficiency and add many new features including
+a fast rigid-body fitting method.
+
+I no longer work at UIUC or with current `voltool` or `mdff` development, so this repo is now archived. For current VMD related information please
+see the [official site](https://www.ks.uiuc.edu/Research/vmd/)
+
+
 # voltool
 New rigid body fitting and volumetric data utilities for VMD.  
   
